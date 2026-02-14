@@ -6,6 +6,12 @@ Desktop GUI app to browse, preview, and bulk-delete chat session files from AI c
 ![Platform](https://img.shields.io/badge/Platform-Windows%20|%20macOS%20|%20Linux-lightgrey)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+## Why This Tool?
+
+Most AI coding assistants (Factory/Droid, Claude Code, Codex CLI, OpenCode, etc.) store conversation sessions locally but **do not provide a built-in way to delete or manage them**. Over time, hundreds of session files accumulate on disk -- many of them blank or abandoned -- with no easy way to browse, filter, or clean them up.
+
+This tool was built to solve that problem: a single app that lets you manage sessions across **multiple AI tools** in one place. Currently supports 4 sources, with more planned as new tools emerge.
+
 ## Screenshot
 
 ![AI Session Cleaner](screenshots/preview-ui.png)
