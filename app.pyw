@@ -461,6 +461,7 @@ class SessionCleaner:
             title = "(tidak ada judul)"
             line_count = 0
             msg_count = 0
+            first_user_msg = ""
             try:
                 with open(filepath, "r", encoding="utf-8") as f:
                     for i, raw_line in enumerate(f):
@@ -482,10 +483,26 @@ class SessionCleaner:
                                 r = entry["message"].get("role", "")
                                 if r in ("user", "assistant"):
                                     msg_count += 1
+                                if r == "user" and not first_user_msg:
+                                    content = entry["message"].get("content", "")
+                                    if isinstance(content, list):
+                                        for part in content:
+                                            if isinstance(part, dict) and part.get("type") == "text":
+                                                content = part.get("text", "")
+                                                break
+                                        else:
+                                            content = ""
+                                    if isinstance(content, str):
+                                        clean = content.strip()
+                                        if clean and not clean.startswith("<system-reminder>"):
+                                            first_user_msg = clean[:150]
                         except:
                             pass
             except:
                 pass
+
+            if title == "(tidak ada judul)" and first_user_msg:
+                title = first_user_msg
 
             is_blank = (size == 0 or msg_count == 0 or
                         (title.lower() in ("new session", "(tidak ada judul)") and msg_count <= 1))
