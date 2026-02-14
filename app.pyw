@@ -8,6 +8,103 @@ from collections import defaultdict
 
 
 class SessionCleaner:
+    STRINGS = {
+        "id": {
+            "size": "Ukuran", "blank": "Kosong", "showing": "Ditampilkan",
+            "selected": "Dipilih", "search": "Cari:", "time": "Waktu:",
+            "sort_label": "Urut:", "group_label": "Group:",
+            "all": "Semua", "today": "Hari ini", "yesterday": "Kemarin",
+            "7d": "7 hari", "30d": "30 hari", "90d": "90 hari", ">90d": "> 90 hari",
+            "newest": "Terbaru", "oldest": "Terlama", "a_z": "A-Z", "z_a": "Z-A",
+            "no_group": "Tanpa Group", "date": "Tanggal", "month": "Bulan", "age": "Umur",
+            "col_date": "Tanggal", "col_title": "Judul Percakapan",
+            "col_size": "Ukuran", "col_age": "Umur",
+            "select_all": "Pilih Semua", "deselect": "Batal Pilih",
+            "invert": "Balik Pilihan", "select_blank": "Pilih Kosong",
+            "sel_7d": "Pilih > 7 hari", "sel_30d": "Pilih > 30 hari",
+            "sel_90d": "Pilih > 90 hari",
+            "del_blank": "Hapus Session Kosong", "del_selected": "Hapus Yang Dipilih",
+            "loading": "Memuat...", "loading_sessions": "Memuat session...",
+            "x_of_y": "{shown} dari {total} session",
+            "preview": "Preview Session",
+            "preview_hint": "Pilih session untuk melihat preview",
+            "preview_click": "Klik session untuk melihat isi percakapan...",
+            "n_selected": "{n} session dipilih",
+            "no_title": "(tidak ada judul)",
+            "no_msg": "(tidak ada pesan)", "no_msg_ua": "(tidak ada pesan user/assistant)",
+            "no_msg_file": "(tidak ada pesan user/assistant dalam file ini)",
+            "empty_file": "(file kosong atau tidak bisa dibaca)",
+            "more_msg": "... masih ada pesan lainnya dalam session ini",
+            "error_read": "Error membaca file: {e}",
+            "no_session_age": "Tidak ada session lebih dari {days} hari.",
+            "blank_found": "Ditemukan {n} session kosong/blank.\nUkuran total: {size}\n\nKriteria: file 0 bytes, tidak ada pesan,\natau hanya 'New Session' tanpa percakapan.",
+            "blank_title": "Session Kosong",
+            "no_blank": "Tidak ada session kosong/blank.",
+            "del_blank_confirm": "Hapus {n} session kosong ({src})?\nUkuran: {size}\n\nKriteria:\n  - File 0 bytes\n  - Tidak ada pesan user/assistant\n  - 'New Session' tanpa percakapan",
+            "done": "Selesai",
+            "del_blank_done": "{n} session kosong dihapus.\nDibebaskan: {size}{extra}",
+            "empty_dirs": "\n+ {n} folder kosong dihapus",
+            "warn": "Peringatan", "warn_select": "Pilih session yang ingin dihapus.",
+            "and_more": "... dan {n} lainnya",
+            "del_confirm_title": "Konfirmasi Hapus",
+            "del_confirm": "Hapus {n} session ({src})?\nUkuran: {size}\n\n{preview}",
+            "del_done": "{n} session dihapus.\nDibebaskan: {size}",
+            "n_session": "{n} session",
+            "other": "Lainnya",
+            "day": "hari", "week": "minggu", "month_u": "bulan", "year": "tahun",
+            "this_week": "Minggu ini", "this_month": "Bulan ini",
+            "1_3m": "1-3 bulan lalu", "3_6m": "3-6 bulan lalu",
+            "6_12m": "6-12 bulan lalu", ">1y": "> 1 tahun lalu",
+        },
+        "en": {
+            "size": "Size", "blank": "Blank", "showing": "Showing",
+            "selected": "Selected", "search": "Search:", "time": "Time:",
+            "sort_label": "Sort:", "group_label": "Group:",
+            "all": "All", "today": "Today", "yesterday": "Yesterday",
+            "7d": "7 days", "30d": "30 days", "90d": "90 days", ">90d": "> 90 days",
+            "newest": "Newest", "oldest": "Oldest", "a_z": "A-Z", "z_a": "Z-A",
+            "no_group": "No Group", "date": "Date", "month": "Month", "age": "Age",
+            "col_date": "Date", "col_title": "Conversation Title",
+            "col_size": "Size", "col_age": "Age",
+            "select_all": "Select All", "deselect": "Deselect",
+            "invert": "Invert Selection", "select_blank": "Select Blank",
+            "sel_7d": "Select > 7 days", "sel_30d": "Select > 30 days",
+            "sel_90d": "Select > 90 days",
+            "del_blank": "Delete Blank Sessions", "del_selected": "Delete Selected",
+            "loading": "Loading...", "loading_sessions": "Loading sessions...",
+            "x_of_y": "{shown} of {total} sessions",
+            "preview": "Session Preview",
+            "preview_hint": "Select a session to preview",
+            "preview_click": "Click a session to view the conversation...",
+            "n_selected": "{n} sessions selected",
+            "no_title": "(no title)",
+            "no_msg": "(no messages)", "no_msg_ua": "(no user/assistant messages)",
+            "no_msg_file": "(no user/assistant messages in this file)",
+            "empty_file": "(empty or unreadable file)",
+            "more_msg": "... more messages in this session",
+            "error_read": "Error reading file: {e}",
+            "no_session_age": "No sessions older than {days} days.",
+            "blank_found": "Found {n} blank sessions.\nTotal size: {size}\n\nCriteria: 0 byte files, no messages,\nor 'New Session' without conversation.",
+            "blank_title": "Blank Sessions",
+            "no_blank": "No blank sessions found.",
+            "del_blank_confirm": "Delete {n} blank sessions ({src})?\nSize: {size}\n\nCriteria:\n  - 0 byte files\n  - No user/assistant messages\n  - 'New Session' without conversation",
+            "done": "Done",
+            "del_blank_done": "{n} blank sessions deleted.\nFreed: {size}{extra}",
+            "empty_dirs": "\n+ {n} empty folders deleted",
+            "warn": "Warning", "warn_select": "Select sessions to delete.",
+            "and_more": "... and {n} more",
+            "del_confirm_title": "Confirm Delete",
+            "del_confirm": "Delete {n} sessions ({src})?\nSize: {size}\n\n{preview}",
+            "del_done": "{n} sessions deleted.\nFreed: {size}",
+            "n_session": "{n} sessions",
+            "other": "Other",
+            "day": "days", "week": "weeks", "month_u": "months", "year": "years",
+            "this_week": "This Week", "this_month": "This Month",
+            "1_3m": "1-3 months ago", "3_6m": "3-6 months ago",
+            "6_12m": "6-12 months ago", ">1y": "> 1 year ago",
+        },
+    }
+
     def __init__(self, root):
         self.root = root
         self.root.title("Session Cleaner")
@@ -21,6 +118,7 @@ class SessionCleaner:
         self.project_colors = {}
         self.session_map = {}
         self.current_source = "factory"
+        self.current_lang = "id"
 
         self.SOURCES = {
             "factory": {
@@ -54,7 +152,17 @@ class SessionCleaner:
 
         self.setup_styles()
         self.build_ui()
+        self._apply_language()
         self.load_all_sessions()
+
+    def t(self, key):
+        return self.STRINGS[self.current_lang].get(key, key)
+
+    def _key_from_display(self, display, keys):
+        for k in keys:
+            if self.t(k) == display:
+                return k
+        return display
 
     def setup_styles(self):
         style = ttk.Style()
@@ -123,6 +231,12 @@ class SessionCleaner:
         self.title_label = ttk.Label(header, text="Session Cleaner", style="Title.TLabel")
         self.title_label.pack(side="left")
 
+        # Language toggle
+        self.lang_btn = tk.Button(header, text="EN", font=("Segoe UI", 8, "bold"),
+                                  padx=6, pady=2, cursor="hand2",
+                                  command=self._toggle_language)
+        self.lang_btn.pack(side="right", padx=(8, 0))
+
         # Source selector
         src_frame = tk.Frame(header, bg=self.colors["bg"])
         src_frame.pack(side="right")
@@ -146,16 +260,17 @@ class SessionCleaner:
 
         self.stat_total = self._stat(stats_frame, "Total", "0")
         self.stat_projects = self._stat(stats_frame, "Project", "0")
-        self.stat_size = self._stat(stats_frame, "Ukuran", "0 MB")
-        self.stat_blank = self._stat(stats_frame, "Kosong", "0")
-        self.stat_showing = self._stat(stats_frame, "Ditampilkan", "0")
-        self.stat_selected = self._stat(stats_frame, "Dipilih", "0")
+        self.stat_size = self._stat(stats_frame, "size", "0 MB")
+        self.stat_blank = self._stat(stats_frame, "blank", "0")
+        self.stat_showing = self._stat(stats_frame, "showing", "0")
+        self.stat_selected = self._stat(stats_frame, "selected", "0")
 
         # Toolbar
         tb1 = ttk.Frame(self.root)
         tb1.pack(fill="x", padx=16, pady=(0, 2))
 
-        ttk.Label(tb1, text="Cari:", style="Dim.TLabel").pack(side="left")
+        self.lbl_search = ttk.Label(tb1, text=self.t("search"), style="Dim.TLabel")
+        self.lbl_search.pack(side="left")
         self.search_var = tk.StringVar()
         self.search_var.trace("w", self.apply_filters)
         tk.Entry(tb1, textvariable=self.search_var, width=28,
@@ -166,32 +281,33 @@ class SessionCleaner:
                  highlightbackground=self.colors["border"]).pack(side="left", padx=(4, 12), ipady=3)
 
         ttk.Label(tb1, text="Project:", style="Dim.TLabel").pack(side="left")
-        self.project_var = tk.StringVar(value="Semua")
+        self.project_var = tk.StringVar(value=self.t("all"))
         self.project_combo = ttk.Combobox(tb1, textvariable=self.project_var, width=25, state="readonly")
         self.project_combo.pack(side="left", padx=(4, 12))
         self.project_combo.bind("<<ComboboxSelected>>", self.apply_filters)
 
-        ttk.Label(tb1, text="Waktu:", style="Dim.TLabel").pack(side="left")
-        self.date_var = tk.StringVar(value="Semua")
-        ttk.Combobox(tb1, textvariable=self.date_var, width=12,
-                     values=["Semua", "Hari ini", "Kemarin", "7 hari", "30 hari",
-                             "90 hari", "> 90 hari"],
-                     state="readonly").pack(side="left", padx=(4, 12))
+        self.lbl_time = ttk.Label(tb1, text=self.t("time"), style="Dim.TLabel")
+        self.lbl_time.pack(side="left")
+        self.date_var = tk.StringVar()
+        self.date_combo = ttk.Combobox(tb1, textvariable=self.date_var, width=12, state="readonly")
+        self.date_combo.pack(side="left", padx=(4, 12))
         self.date_var.trace("w", self.apply_filters)
 
-        ttk.Label(tb1, text="Urut:", style="Dim.TLabel").pack(side="left")
-        self.sort_var = tk.StringVar(value="Terbaru")
-        ttk.Combobox(tb1, textvariable=self.sort_var, width=10,
-                     values=["Terbaru", "Terlama", "A-Z", "Z-A", "Ukuran", "Project"],
-                     state="readonly").pack(side="left", padx=(4, 12))
+        self.lbl_sort = ttk.Label(tb1, text=self.t("sort_label"), style="Dim.TLabel")
+        self.lbl_sort.pack(side="left")
+        self.sort_var = tk.StringVar()
+        self.sort_combo = ttk.Combobox(tb1, textvariable=self.sort_var, width=10, state="readonly")
+        self.sort_combo.pack(side="left", padx=(4, 12))
         self.sort_var.trace("w", self.apply_filters)
 
-        ttk.Label(tb1, text="Group:", style="Dim.TLabel").pack(side="left")
-        self.group_var = tk.StringVar(value="Tanpa Group")
-        ttk.Combobox(tb1, textvariable=self.group_var, width=12,
-                     values=["Tanpa Group", "Project", "Tanggal", "Bulan", "Umur"],
-                     state="readonly").pack(side="left", padx=(4, 0))
+        self.lbl_group = ttk.Label(tb1, text=self.t("group_label"), style="Dim.TLabel")
+        self.lbl_group.pack(side="left")
+        self.group_var = tk.StringVar()
+        self.group_combo = ttk.Combobox(tb1, textvariable=self.group_var, width=12, state="readonly")
+        self.group_combo.pack(side="left", padx=(4, 0))
         self.group_var.trace("w", self.apply_filters)
+
+        self._update_combo_values()
 
         # PanedWindow (tree + preview)
         self.paned = tk.PanedWindow(self.root, orient="vertical", bg=self.colors["bg"],
@@ -209,10 +325,10 @@ class SessionCleaner:
         self.tree.heading("#0", text="", anchor="w")
         self.tree.heading("source", text="Source", command=lambda: self._sort_click("source"))
         self.tree.heading("project", text="Project", command=lambda: self._sort_click("project"))
-        self.tree.heading("date", text="Tanggal", command=lambda: self._sort_click("date"))
-        self.tree.heading("title", text="Judul Percakapan", command=lambda: self._sort_click("title"))
-        self.tree.heading("size", text="Ukuran", command=lambda: self._sort_click("size"))
-        self.tree.heading("age", text="Umur", command=lambda: self._sort_click("age"))
+        self.tree.heading("date", text=self.t("col_date"), command=lambda: self._sort_click("date"))
+        self.tree.heading("title", text=self.t("col_title"), command=lambda: self._sort_click("title"))
+        self.tree.heading("size", text=self.t("col_size"), command=lambda: self._sort_click("size"))
+        self.tree.heading("age", text=self.t("col_age"), command=lambda: self._sort_click("age"))
 
         self.tree.column("#0", width=30, minwidth=30, stretch=False)
         self.tree.column("source", width=0, minwidth=0, stretch=False)
@@ -246,7 +362,7 @@ class SessionCleaner:
         preview_header = tk.Frame(preview_frame, bg=self.colors["surface"])
         preview_header.pack(fill="x")
 
-        self.preview_title_label = tk.Label(preview_header, text="Preview Session",
+        self.preview_title_label = tk.Label(preview_header, text=self.t("preview"),
                                             bg=self.colors["surface"], fg=self.colors["accent"],
                                             font=("Segoe UI", 10, "bold"), anchor="w", padx=10, pady=4)
         self.preview_title_label.pack(side="left", fill="x", expand=True)
@@ -288,29 +404,38 @@ class SessionCleaner:
         btn_row = ttk.Frame(bottom)
         btn_row.pack(fill="x")
 
-        ttk.Button(btn_row, text="Pilih Semua", command=self.select_all).pack(side="left", padx=(0, 3))
-        ttk.Button(btn_row, text="Batal Pilih", command=self.deselect_all).pack(side="left", padx=(0, 3))
-        ttk.Button(btn_row, text="Balik Pilihan", command=self.invert_selection).pack(side="left", padx=(0, 3))
+        self.btn_select_all = ttk.Button(btn_row, text=self.t("select_all"), command=self.select_all)
+        self.btn_select_all.pack(side="left", padx=(0, 3))
+        self.btn_deselect = ttk.Button(btn_row, text=self.t("deselect"), command=self.deselect_all)
+        self.btn_deselect.pack(side="left", padx=(0, 3))
+        self.btn_invert = ttk.Button(btn_row, text=self.t("invert"), command=self.invert_selection)
+        self.btn_invert.pack(side="left", padx=(0, 3))
 
         tk.Frame(btn_row, width=1, bg=self.colors["border"]).pack(side="left", fill="y", padx=8, pady=2)
 
-        ttk.Button(btn_row, text="Pilih Kosong", style="Warn.TButton",
-                   command=self.select_blank).pack(side="left", padx=(0, 3))
-        ttk.Button(btn_row, text="Pilih > 7 hari", command=lambda: self.select_by_age(7)).pack(side="left", padx=(0, 3))
-        ttk.Button(btn_row, text="Pilih > 30 hari", command=lambda: self.select_by_age(30)).pack(side="left", padx=(0, 3))
-        ttk.Button(btn_row, text="Pilih > 90 hari", command=lambda: self.select_by_age(90)).pack(side="left", padx=(0, 3))
+        self.btn_sel_blank = ttk.Button(btn_row, text=self.t("select_blank"), style="Warn.TButton",
+                   command=self.select_blank)
+        self.btn_sel_blank.pack(side="left", padx=(0, 3))
+        self.btn_sel_7d = ttk.Button(btn_row, text=self.t("sel_7d"), command=lambda: self.select_by_age(7))
+        self.btn_sel_7d.pack(side="left", padx=(0, 3))
+        self.btn_sel_30d = ttk.Button(btn_row, text=self.t("sel_30d"), command=lambda: self.select_by_age(30))
+        self.btn_sel_30d.pack(side="left", padx=(0, 3))
+        self.btn_sel_90d = ttk.Button(btn_row, text=self.t("sel_90d"), command=lambda: self.select_by_age(90))
+        self.btn_sel_90d.pack(side="left", padx=(0, 3))
 
         tk.Frame(btn_row, width=1, bg=self.colors["border"]).pack(side="left", fill="y", padx=8, pady=2)
 
-        ttk.Button(btn_row, text="Hapus Session Kosong", style="Warn.TButton",
-                   command=self.delete_blank_sessions).pack(side="left", padx=(0, 3))
+        self.btn_del_blank = ttk.Button(btn_row, text=self.t("del_blank"), style="Warn.TButton",
+                   command=self.delete_blank_sessions)
+        self.btn_del_blank.pack(side="left", padx=(0, 3))
         ttk.Button(btn_row, text="Refresh", style="Accent.TButton",
                    command=self.refresh).pack(side="left", padx=(0, 3))
 
-        ttk.Button(btn_row, text="Hapus Yang Dipilih", style="Danger.TButton",
-                   command=self.delete_selected).pack(side="right")
+        self.btn_del_selected = ttk.Button(btn_row, text=self.t("del_selected"), style="Danger.TButton",
+                   command=self.delete_selected)
+        self.btn_del_selected.pack(side="right")
 
-        self.status_label = ttk.Label(btn_row, text="Memuat...", style="Dim.TLabel")
+        self.status_label = ttk.Label(btn_row, text=self.t("loading"), style="Dim.TLabel")
         self.status_label.pack(side="right", padx=12)
 
     def _switch_source(self, source):
@@ -319,8 +444,8 @@ class SessionCleaner:
         self.current_source = source
         self._update_source_buttons()
         self.search_var.set("")
-        self.project_var.set("Semua")
-        self.date_var.set("Semua")
+        self.project_var.set(self.t("all"))
+        self.date_var.set(self.t("all"))
         self.load_all_sessions()
 
     def _update_source_buttons(self):
@@ -333,14 +458,63 @@ class SessionCleaner:
                 btn.config(bg=c["border"], fg=c["text"], relief="raised")
         self.title_label.config(foreground=accent)
 
-    def _stat(self, parent, label, value):
+    def _toggle_language(self):
+        self.current_lang = "en" if self.current_lang == "id" else "id"
+        self._apply_language()
+        self.load_all_sessions()
+
+    def _update_combo_values(self):
+        self._date_keys = ["all", "today", "yesterday", "7d", "30d", "90d", ">90d"]
+        self._sort_keys = ["newest", "oldest", "a_z", "z_a", "size", "project"]
+        self._group_keys = ["no_group", "project", "date", "month", "age"]
+        self.date_combo["values"] = [self.t(k) for k in self._date_keys]
+        self.sort_combo["values"] = [self.t(k) for k in self._sort_keys]
+        self.group_combo["values"] = [self.t(k) for k in self._group_keys]
+        self.date_var.set(self.t("all"))
+        self.sort_var.set(self.t("newest"))
+        self.group_var.set(self.t("no_group"))
+
+    def _apply_language(self):
+        self.lang_btn.config(text="ID" if self.current_lang == "en" else "EN",
+                             bg=self.colors["accent"] if self.current_lang == "en" else self.colors["border"],
+                             fg="#000" if self.current_lang == "en" else self.colors["text"])
+        self._update_combo_values()
+        self.project_var.set(self.t("all"))
+        self.lbl_search.config(text=self.t("search"))
+        self.lbl_time.config(text=self.t("time"))
+        self.lbl_sort.config(text=self.t("sort_label"))
+        self.lbl_group.config(text=self.t("group_label"))
+        self.tree.heading("date", text=self.t("col_date"))
+        self.tree.heading("title", text=self.t("col_title"))
+        self.tree.heading("size", text=self.t("col_size"))
+        self.tree.heading("age", text=self.t("col_age"))
+        self.preview_title_label.config(text=self.t("preview"))
+        self.preview_info_label.config(text=self.t("preview_hint"))
+        self.btn_select_all.config(text=self.t("select_all"))
+        self.btn_deselect.config(text=self.t("deselect"))
+        self.btn_invert.config(text=self.t("invert"))
+        self.btn_sel_blank.config(text=self.t("select_blank"))
+        self.btn_sel_7d.config(text=self.t("sel_7d"))
+        self.btn_sel_30d.config(text=self.t("sel_30d"))
+        self.btn_sel_90d.config(text=self.t("sel_90d"))
+        self.btn_del_blank.config(text=self.t("del_blank"))
+        self.btn_del_selected.config(text=self.t("del_selected"))
+        for w in (self.stat_size, self.stat_blank, self.stat_showing, self.stat_selected):
+            lbl = w.master.winfo_children()[1]
+            if hasattr(lbl, "_lang_key"):
+                lbl.config(text=self.t(lbl._lang_key))
+
+    def _stat(self, parent, label_key, value):
         f = tk.Frame(parent, bg=self.colors["surface"], padx=16, pady=6)
         f.pack(side="left", fill="both", expand=True)
         v = tk.Label(f, text=value, bg=self.colors["surface"], fg=self.colors["accent"],
                      font=("Segoe UI", 13, "bold"))
         v.pack(anchor="w")
-        tk.Label(f, text=label, bg=self.colors["surface"], fg=self.colors["dim"],
-                 font=("Segoe UI", 8)).pack(anchor="w")
+        display = self.t(label_key) if label_key in self.STRINGS["id"] else label_key
+        lbl = tk.Label(f, text=display, bg=self.colors["surface"], fg=self.colors["dim"],
+                 font=("Segoe UI", 8))
+        lbl.pack(anchor="w")
+        lbl._lang_key = label_key
         return v
 
     def fmt_size(self, b):
@@ -350,12 +524,12 @@ class SessionCleaner:
 
     def fmt_age(self, dt):
         days = (datetime.now() - dt).days
-        if days == 0: return "Hari ini"
-        if days == 1: return "Kemarin"
-        if days < 7: return f"{days} hari"
-        if days < 30: return f"{days//7} minggu"
-        if days < 365: return f"{days//30} bulan"
-        return f"{days//365} tahun"
+        if days == 0: return self.t("today")
+        if days == 1: return self.t("yesterday")
+        if days < 7: return f"{days} {self.t('day')}"
+        if days < 30: return f"{days//7} {self.t('week')}"
+        if days < 365: return f"{days//30} {self.t('month_u')}"
+        return f"{days//365} {self.t('year')}"
 
     def get_project_name(self, folder_name):
         if not folder_name:
@@ -372,14 +546,14 @@ class SessionCleaner:
 
     def get_age_group(self, dt):
         days = (datetime.now() - dt).days
-        if days == 0: return "Hari ini"
-        if days == 1: return "Kemarin"
-        if days <= 7: return "Minggu ini"
-        if days <= 30: return "Bulan ini"
-        if days <= 90: return "1-3 bulan lalu"
-        if days <= 180: return "3-6 bulan lalu"
-        if days <= 365: return "6-12 bulan lalu"
-        return "> 1 tahun lalu"
+        if days == 0: return self.t("today")
+        if days == 1: return self.t("yesterday")
+        if days <= 7: return self.t("this_week")
+        if days <= 30: return self.t("this_month")
+        if days <= 90: return self.t("1_3m")
+        if days <= 180: return self.t("3_6m")
+        if days <= 365: return self.t("6_12m")
+        return self.t(">1y")
 
     def _assign_project_colors(self):
         self.project_colors = {}
@@ -394,7 +568,7 @@ class SessionCleaner:
         self.projects = set()
         self.session_map = {}
 
-        self.status_label.config(text="Memuat session...")
+        self.status_label.config(text=self.t("loading_sessions"))
         self.root.update_idletasks()
 
         if self.current_source == "factory":
@@ -415,7 +589,7 @@ class SessionCleaner:
         self.stat_size.config(text=self.fmt_size(total_size))
         self.stat_blank.config(text=str(blank_count))
 
-        project_list = ["Semua"] + sorted(self.projects)
+        project_list = [self.t("all")] + sorted(self.projects)
         self.project_combo["values"] = project_list
 
         self.apply_filters()
@@ -458,7 +632,8 @@ class SessionCleaner:
             if os.path.exists(settings):
                 size += os.path.getsize(settings)
 
-            title = "(tidak ada judul)"
+            no_title = self.t("no_title")
+            title = no_title
             line_count = 0
             msg_count = 0
             first_user_msg = ""
@@ -501,11 +676,11 @@ class SessionCleaner:
             except:
                 pass
 
-            if title == "(tidak ada judul)" and first_user_msg:
+            if title == no_title and first_user_msg:
                 title = first_user_msg
 
             is_blank = (size == 0 or msg_count == 0 or
-                        (title.lower() in ("new session", "(tidak ada judul)") and msg_count <= 1))
+                        (title.lower() in ("new session", no_title.lower()) and msg_count <= 1))
 
             dt = datetime.fromtimestamp(mtime)
             project = self.get_project_name(folder_name)
@@ -577,7 +752,8 @@ class SessionCleaner:
                         extra_files.append(efp)
                         size += os.path.getsize(efp)
 
-            title = "(tidak ada judul)"
+            no_title = self.t("no_title")
+            title = no_title
             msg_count = 0
             if index_entry:
                 fp_text = index_entry.get("firstPrompt", "")
@@ -594,7 +770,7 @@ class SessionCleaner:
                             data = json.loads(line)
                             if data.get("type") in ("user", "human", "assistant"):
                                 msg_count += 1
-                                if data.get("type") in ("user", "human") and title == "(tidak ada judul)":
+                                if data.get("type") in ("user", "human") and title == no_title:
                                     msg = data.get("message", {})
                                     if isinstance(msg, dict):
                                         content = msg.get("content", "")
@@ -645,7 +821,8 @@ class SessionCleaner:
             mtime = os.path.getmtime(filepath)
             size = os.path.getsize(filepath)
 
-            title = "(tidak ada judul)"
+            no_title = self.t("no_title")
+            title = no_title
             project = "(unknown)"
             msg_count = 0
             try:
@@ -669,7 +846,7 @@ class SessionCleaner:
                                     cwd.replace("\\", "-").replace("/", "-").replace(":", "").lstrip("-"))
                         elif t == "event_msg":
                             msg_text = payload.get("message", "")
-                            if msg_text and title == "(tidak ada judul)":
+                            if msg_text and title == no_title:
                                 clean = msg_text.strip()
                                 marker = "My request for Codex:\n"
                                 idx = clean.find(marker)
@@ -734,7 +911,7 @@ class SessionCleaner:
                 data = json.load(f)
 
             sid = data.get("id", "")
-            title = data.get("title", "(tidak ada judul)")
+            title = data.get("title", self.t("no_title"))
             directory = data.get("directory", "")
             time_info = data.get("time", {})
             created = time_info.get("created", 0)
@@ -779,7 +956,7 @@ class SessionCleaner:
                 "source": "opencode", "project": project,
                 "mtime": dt.timestamp(), "date_str": dt.strftime("%Y-%m-%d %H:%M"),
                 "date_date": dt.strftime("%Y-%m-%d"), "date_month": dt.strftime("%Y-%m"),
-                "date_obj": dt, "title": title or "(tidak ada judul)",
+                "date_obj": dt, "title": title or self.t("no_title"),
                 "size": size, "size_str": self.fmt_size(size),
                 "age_str": self.fmt_age(dt),
                 "age_days": (datetime.now() - dt).days,
@@ -794,9 +971,9 @@ class SessionCleaner:
     def apply_filters(self, *args):
         search = self.search_var.get().lower()
         project_filter = self.project_var.get()
-        date_filter = self.date_var.get()
-        sort_mode = self.sort_var.get()
-        group_mode = self.group_var.get()
+        date_filter = self._key_from_display(self.date_var.get(), self._date_keys)
+        sort_mode = self._key_from_display(self.sort_var.get(), self._sort_keys)
+        group_mode = self._key_from_display(self.group_var.get(), self._group_keys)
 
         result = []
         for s in self.all_sessions:
@@ -805,45 +982,45 @@ class SessionCleaner:
                     and search not in s["project"].lower()
                     and search not in s["date_str"]):
                     continue
-            if project_filter != "Semua" and s["project"] != project_filter:
+            if project_filter != self.t("all") and s["project"] != project_filter:
                 continue
             days = s["age_days"]
-            if date_filter == "Hari ini" and days > 0: continue
-            elif date_filter == "Kemarin" and days != 1: continue
-            elif date_filter == "7 hari" and days > 7: continue
-            elif date_filter == "30 hari" and days > 30: continue
-            elif date_filter == "90 hari" and days > 90: continue
-            elif date_filter == "> 90 hari" and days <= 90: continue
+            if date_filter == "today" and days > 0: continue
+            elif date_filter == "yesterday" and days != 1: continue
+            elif date_filter == "7d" and days > 7: continue
+            elif date_filter == "30d" and days > 30: continue
+            elif date_filter == "90d" and days > 90: continue
+            elif date_filter == ">90d" and days <= 90: continue
             result.append(s)
 
-        if sort_mode == "Terbaru":
+        if sort_mode == "newest":
             result.sort(key=lambda x: x["mtime"], reverse=True)
-        elif sort_mode == "Terlama":
+        elif sort_mode == "oldest":
             result.sort(key=lambda x: x["mtime"])
-        elif sort_mode == "A-Z":
+        elif sort_mode == "a_z":
             result.sort(key=lambda x: x["title"].lower())
-        elif sort_mode == "Z-A":
+        elif sort_mode == "z_a":
             result.sort(key=lambda x: x["title"].lower(), reverse=True)
-        elif sort_mode == "Ukuran":
+        elif sort_mode == "size":
             result.sort(key=lambda x: x["size"], reverse=True)
-        elif sort_mode == "Project":
+        elif sort_mode == "project":
             result.sort(key=lambda x: (x["project"].lower(), -x["mtime"]))
 
         self.filtered_sessions = result
         self.render_tree(group_mode)
 
     def _sort_click(self, col):
-        mapping = {"project": "Project", "date": "Terbaru", "title": "A-Z",
-                   "size": "Ukuran", "age": "Terlama"}
-        current = self.sort_var.get()
-        target = mapping.get(col, "Terbaru")
+        mapping = {"project": "project", "date": "newest", "title": "a_z",
+                   "size": "size", "age": "oldest"}
+        current = self._key_from_display(self.sort_var.get(), self._sort_keys)
+        target = mapping.get(col, "newest")
         if col == "date":
-            target = "Terlama" if current == "Terbaru" else "Terbaru"
+            target = "oldest" if current == "newest" else "newest"
         elif col == "title":
-            target = "Z-A" if current == "A-Z" else "A-Z"
-        self.sort_var.set(target)
+            target = "z_a" if current == "a_z" else "a_z"
+        self.sort_var.set(self.t(target))
 
-    def render_tree(self, group_mode="Tanpa Group"):
+    def render_tree(self, group_mode="no_group"):
         for item in self.tree.get_children():
             self.tree.delete(item)
 
@@ -859,7 +1036,7 @@ class SessionCleaner:
 
         self.tree.tag_configure("blank", foreground="#555566")
 
-        if group_mode == "Tanpa Group":
+        if group_mode == "no_group":
             for s in self.filtered_sessions:
                 tag = f"proj_{hash(s['project'])}"
                 tags = (tag, "blank") if s.get("is_blank") else (tag,)
@@ -870,23 +1047,24 @@ class SessionCleaner:
         else:
             groups = defaultdict(list)
             for s in self.filtered_sessions:
-                if group_mode == "Project":
+                if group_mode == "project":
                     key = s["project"]
-                elif group_mode == "Tanggal":
+                elif group_mode == "date":
                     key = s["date_date"]
-                elif group_mode == "Bulan":
+                elif group_mode == "month":
                     key = s["date_month"]
-                elif group_mode == "Umur":
+                elif group_mode == "age":
                     key = s["age_group"]
                 else:
-                    key = "Lainnya"
+                    key = self.t("other")
                 groups[key].append(s)
 
-            if group_mode == "Umur":
-                order = ["Hari ini", "Kemarin", "Minggu ini", "Bulan ini",
-                         "1-3 bulan lalu", "3-6 bulan lalu", "6-12 bulan lalu", "> 1 tahun lalu"]
+            if group_mode == "age":
+                order = [self.t("today"), self.t("yesterday"), self.t("this_week"),
+                         self.t("this_month"), self.t("1_3m"), self.t("3_6m"),
+                         self.t("6_12m"), self.t(">1y")]
                 sorted_keys = [k for k in order if k in groups]
-            elif group_mode in ("Tanggal", "Bulan"):
+            elif group_mode in ("date", "month"):
                 sorted_keys = sorted(groups.keys(), reverse=True)
             else:
                 sorted_keys = sorted(groups.keys())
@@ -897,7 +1075,7 @@ class SessionCleaner:
                 gid = f"__group_{gidx}"
 
                 self.tree.insert("", "end", iid=gid, text="",
-                               values=("", f"{key}", f"{len(items)} session", "", total, ""),
+                               values=("", f"{key}", self.t("n_session").format(n=len(items)), "", total, ""),
                                tags=("group",), open=True)
 
                 for s in items:
@@ -909,7 +1087,7 @@ class SessionCleaner:
                                    tags=tags)
 
         self.status_label.config(
-            text=f"{len(self.filtered_sessions)} dari {len(self.all_sessions)} session")
+            text=self.t("x_of_y").format(shown=len(self.filtered_sessions), total=len(self.all_sessions)))
         self._clear_preview()
 
     # ── Selection ──
@@ -928,15 +1106,15 @@ class SessionCleaner:
             self._clear_preview()
 
     def _clear_preview(self):
-        self.preview_title_label.config(text="Preview Session", fg=self.colors["accent"])
-        self.preview_info_label.config(text="Pilih session untuk melihat preview")
+        self.preview_title_label.config(text=self.t("preview"), fg=self.colors["accent"])
+        self.preview_info_label.config(text=self.t("preview_hint"))
         self.preview_text.config(state="normal")
         self.preview_text.delete("1.0", "end")
-        self.preview_text.insert("end", "Klik session untuk melihat isi percakapan...", "meta")
+        self.preview_text.insert("end", self.t("preview_click"), "meta")
         self.preview_text.config(state="disabled")
 
     def _show_multi_preview(self, sids):
-        self.preview_title_label.config(text=f"{len(sids)} session dipilih", fg=self.colors["accent"])
+        self.preview_title_label.config(text=self.t("n_selected").format(n=len(sids)), fg=self.colors["accent"])
         total_size = sum(self.session_map[s]["size"] for s in sids if s in self.session_map)
         self.preview_info_label.config(text=f"Total: {self.fmt_size(total_size)}")
 
@@ -955,7 +1133,7 @@ class SessionCleaner:
             if i < len(sids) - 1:
                 self.preview_text.insert("end", "\n")
         if len(sids) > 15:
-            self.preview_text.insert("end", f"\n... dan {len(sids) - 15} session lainnya\n", "meta")
+            self.preview_text.insert("end", f"\n{self.t('and_more').format(n=len(sids) - 15)}\n", "meta")
         self.preview_text.config(state="disabled")
 
     def _extract_content_text(self, content):
@@ -1008,7 +1186,7 @@ class SessionCleaner:
             part_dir = os.path.join(base, "part")
 
             if not os.path.isdir(msg_dir):
-                self.preview_text.insert("end", "(tidak ada pesan)", "meta")
+                self.preview_text.insert("end", self.t("no_msg"), "meta")
                 return
 
             # Load messages sorted by creation time
@@ -1059,11 +1237,11 @@ class SessionCleaner:
                 msg_count += 1
                 if msg_count >= 15:
                     self.preview_text.insert("end",
-                        "\n... masih ada pesan lainnya dalam session ini\n", "meta")
+                        f"\n{self.t('more_msg')}\n", "meta")
                     break
 
             if msg_count == 0:
-                self.preview_text.insert("end", "(tidak ada pesan user/assistant)", "meta")
+                self.preview_text.insert("end", self.t("no_msg_ua"), "meta")
 
         except Exception as e:
             self.preview_text.insert("end", f"Error: {e}", "meta")
@@ -1085,7 +1263,7 @@ class SessionCleaner:
                         continue
 
             if not entries:
-                self.preview_text.insert("end", "(file kosong atau tidak bisa dibaca)", "meta")
+                self.preview_text.insert("end", self.t("empty_file"), "meta")
                 return
 
             msg_count = 0
@@ -1159,14 +1337,14 @@ class SessionCleaner:
                 msg_count += 1
                 if msg_count >= 15:
                     self.preview_text.insert("end",
-                        f"\n... masih ada pesan lainnya dalam session ini\n", "meta")
+                        f"\n{self.t('more_msg')}\n", "meta")
                     break
 
             if msg_count == 0:
-                self.preview_text.insert("end", "(tidak ada pesan user/assistant dalam file ini)", "meta")
+                self.preview_text.insert("end", self.t("no_msg_file"), "meta")
 
         except Exception as e:
-            self.preview_text.insert("end", f"Error membaca file: {e}", "meta")
+            self.preview_text.insert("end", self.t("error_read").format(e=e), "meta")
 
     def _delete_opencode_extras(self, s):
         base = self.SOURCES["opencode"]["dir"]
@@ -1228,7 +1406,7 @@ class SessionCleaner:
             self.tree.selection_set(to_select)
             self.stat_selected.config(text=str(len(to_select)))
         else:
-            messagebox.showinfo("Info", f"Tidak ada session lebih dari {days} hari.")
+            messagebox.showinfo("Info", self.t("no_session_age").format(days=days))
 
     def select_blank(self):
         to_select = [s["id"] for s in self.filtered_sessions if s.get("is_blank")]
@@ -1236,30 +1414,22 @@ class SessionCleaner:
             self.tree.selection_set(to_select)
             self.stat_selected.config(text=str(len(to_select)))
             total_size = sum(s["size"] for s in self.filtered_sessions if s.get("is_blank"))
-            messagebox.showinfo("Session Kosong",
-                f"Ditemukan {len(to_select)} session kosong/blank.\n"
-                f"Ukuran total: {self.fmt_size(total_size)}\n\n"
-                f"Kriteria: file 0 bytes, tidak ada pesan,\n"
-                f"atau hanya 'New Session' tanpa percakapan.")
+            messagebox.showinfo(self.t("blank_title"),
+                self.t("blank_found").format(n=len(to_select), size=self.fmt_size(total_size)))
         else:
-            messagebox.showinfo("Info", "Tidak ada session kosong/blank.")
+            messagebox.showinfo("Info", self.t("no_blank"))
 
     def delete_blank_sessions(self):
         blanks = [s for s in self.all_sessions if s.get("is_blank")]
         if not blanks:
-            messagebox.showinfo("Info", "Tidak ada session kosong/blank.")
+            messagebox.showinfo("Info", self.t("no_blank"))
             return
 
         total_size = sum(s["size"] for s in blanks)
         src_label = self.SOURCES[self.current_source]["label"]
-        msg = (f"Hapus {len(blanks)} session kosong ({src_label})?\n"
-               f"Ukuran: {self.fmt_size(total_size)}\n\n"
-               f"Kriteria:\n"
-               f"  - File 0 bytes\n"
-               f"  - Tidak ada pesan user/assistant\n"
-               f"  - 'New Session' tanpa percakapan")
+        msg = self.t("del_blank_confirm").format(n=len(blanks), src=src_label, size=self.fmt_size(total_size))
 
-        if not messagebox.askyesno("Hapus Session Kosong", msg, icon="warning"):
+        if not messagebox.askyesno(self.t("del_blank"), msg, icon="warning"):
             return
 
         deleted = 0
@@ -1296,10 +1466,9 @@ class SessionCleaner:
                     except:
                         pass
 
-        extra = f"\n+ {empty_dirs} folder kosong dihapus" if empty_dirs else ""
-        messagebox.showinfo("Selesai",
-                           f"{deleted} session kosong dihapus.\n"
-                           f"Dibebaskan: {self.fmt_size(total_size)}{extra}")
+        extra = self.t("empty_dirs").format(n=empty_dirs) if empty_dirs else ""
+        messagebox.showinfo(self.t("done"),
+                           self.t("del_blank_done").format(n=deleted, size=self.fmt_size(total_size), extra=extra))
         self.refresh()
 
     def refresh(self):
@@ -1309,7 +1478,7 @@ class SessionCleaner:
         raw = self.tree.selection()
         selected = [s for s in raw if not s.startswith("__group_")]
         if not selected:
-            messagebox.showwarning("Peringatan", "Pilih session yang ingin dihapus.")
+            messagebox.showwarning(self.t("warn"), self.t("warn_select"))
             return
 
         total_size = 0
@@ -1322,13 +1491,13 @@ class SessionCleaner:
 
         preview = "\n".join(lines[:10])
         if len(lines) > 10:
-            preview += f"\n  ... dan {len(lines) - 10} lainnya"
+            preview += f"\n  {self.t('and_more').format(n=len(lines) - 10)}"
 
         src_label = self.SOURCES[self.current_source]["label"]
-        msg = (f"Hapus {len(selected)} session ({src_label})?\n"
-               f"Ukuran: {self.fmt_size(total_size)}\n\n{preview}")
+        msg = self.t("del_confirm").format(n=len(selected), src=src_label,
+                                           size=self.fmt_size(total_size), preview=preview)
 
-        if not messagebox.askyesno("Konfirmasi Hapus", msg, icon="warning"):
+        if not messagebox.askyesno(self.t("del_confirm_title"), msg, icon="warning"):
             return
 
         deleted = 0
@@ -1360,9 +1529,8 @@ class SessionCleaner:
             elif s["source"] == "opencode":
                 self._delete_opencode_extras(s)
 
-        messagebox.showinfo("Selesai",
-                           f"{deleted} session dihapus.\n"
-                           f"Dibebaskan: {self.fmt_size(total_size)}")
+        messagebox.showinfo(self.t("done"),
+                           self.t("del_done").format(n=deleted, size=self.fmt_size(total_size)))
 
         sel_set = set(selected)
         self.all_sessions = [s for s in self.all_sessions if s["id"] not in sel_set]
