@@ -790,7 +790,7 @@ class SessionCleaner:
                             data = json.loads(line)
                             if data.get("type") in ("user", "human", "assistant"):
                                 msg_count += 1
-                                if data.get("type") in ("user", "human") and title == no_title:
+                                if data.get("type") in ("user", "human") and (title == no_title or not first_chat):
                                     msg = data.get("message", {})
                                     if isinstance(msg, dict):
                                         content = msg.get("content", "")
@@ -804,12 +804,15 @@ class SessionCleaner:
                                         if isinstance(content, str):
                                             clean = content.strip()
                                             if clean and not self._is_claude_command(clean):
-                                                title = clean[:150]
-                                                first_chat = title
+                                                if title == no_title:
+                                                    title = clean[:150]
+                                                if not first_chat:
+                                                    first_chat = clean[:150]
                 except:
                     pass
 
-            is_blank = (size == 0 or msg_count == 0 or
+            is_blank = (size == 0 or
+                        (msg_count == 0 and os.path.getsize(filepath) < 100) or
                         (title.lower().startswith("[request interrupted") and msg_count <= 2))
 
             dt = datetime.fromtimestamp(mtime)
