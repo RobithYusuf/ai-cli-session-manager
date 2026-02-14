@@ -765,11 +765,20 @@ class SessionCleaner:
 
             no_title = self.t("no_title")
             title = no_title
+            first_chat = ""
             msg_count = 0
             if index_entry:
                 fp_text = index_entry.get("firstPrompt", "")
-                if fp_text:
+                summary_text = index_entry.get("summary", "")
+                # Clean firstPrompt - skip system tags
+                if fp_text and (fp_text.startswith("<local-command") or fp_text == "No prompt"):
+                    fp_text = ""
+                if isinstance(summary_text, str) and summary_text.strip():
+                    title = summary_text.strip()[:150]
+                    first_chat = fp_text[:150] if fp_text else ""
+                elif fp_text:
                     title = fp_text[:150]
+                    first_chat = fp_text[:150]
                 msg_count = index_entry.get("messageCount", 0)
             else:
                 try:
@@ -785,8 +794,18 @@ class SessionCleaner:
                                     msg = data.get("message", {})
                                     if isinstance(msg, dict):
                                         content = msg.get("content", "")
-                                        if isinstance(content, str) and content.strip():
-                                            title = content.strip()[:150]
+                                        if isinstance(content, list):
+                                            for p in content:
+                                                if isinstance(p, dict) and p.get("type") == "text":
+                                                    content = p.get("text", "")
+                                                    break
+                                            else:
+                                                content = ""
+                                        if isinstance(content, str):
+                                            clean = content.strip()
+                                            if clean and not clean.startswith("<local-command") and not clean.startswith("<system-reminder>"):
+                                                title = clean[:150]
+                                                first_chat = title
                 except:
                     pass
 
@@ -800,7 +819,7 @@ class SessionCleaner:
                 "source": "claude", "project": project,
                 "mtime": mtime, "date_str": dt.strftime("%Y-%m-%d %H:%M"),
                 "date_date": dt.strftime("%Y-%m-%d"), "date_month": dt.strftime("%Y-%m"),
-                "date_obj": dt, "title": title, "first_chat": title,
+                "date_obj": dt, "title": title, "first_chat": first_chat or title,
                 "size": size, "size_str": self.fmt_size(size),
                 "age_str": self.fmt_age(dt),
                 "age_days": (datetime.now() - dt).days,
@@ -937,6 +956,8 @@ class SessionCleaner:
             msg_session_dir = os.path.join(msg_dir, sid)
             extra_files = [filepath]
             msg_count = 0
+            first_user_msg = ""
+            first_user_created = float("inf")
 
             if os.path.isdir(msg_session_dir):
                 for mf in os.listdir(msg_session_dir):
@@ -947,9 +968,28 @@ class SessionCleaner:
                         try:
                             with open(mfp, "r", encoding="utf-8") as mfh:
                                 md = json.load(mfh)
-                            if md.get("role") in ("user", "assistant"):
+                            role = md.get("role", "")
+                            if role in ("user", "assistant"):
                                 msg_count += 1
-                            # Also count parts
+                            # Grab first user message text
+                            if role == "user":
+                                mc = md.get("time", {}).get("created", 0)
+                                if mc < first_user_created:
+                                    mid = md.get("id", "")
+                                    pdir = os.path.join(base_dir, "part", mid)
+                                    if os.path.isdir(pdir):
+                                        for pf in sorted(os.listdir(pdir)):
+                                            pfp = os.path.join(pdir, pf)
+                                            try:
+                                                with open(pfp, "r", encoding="utf-8") as ph:
+                                                    pd = json.load(ph)
+                                                if pd.get("type") == "text" and pd.get("text"):
+                                                    first_user_msg = pd["text"].strip()[:150]
+                                                    first_user_created = mc
+                                                    break
+                                            except:
+                                                pass
+                            # Also count parts for size
                             part_dir = os.path.join(base_dir, "part", md.get("id", ""))
                             if os.path.isdir(part_dir):
                                 for pf in os.listdir(part_dir):
@@ -968,7 +1008,7 @@ class SessionCleaner:
                 "mtime": dt.timestamp(), "date_str": dt.strftime("%Y-%m-%d %H:%M"),
                 "date_date": dt.strftime("%Y-%m-%d"), "date_month": dt.strftime("%Y-%m"),
                 "date_obj": dt, "title": title or self.t("no_title"),
-                "first_chat": title or "",
+                "first_chat": first_user_msg or "",
                 "size": size, "size_str": self.fmt_size(size),
                 "age_str": self.fmt_age(dt),
                 "age_days": (datetime.now() - dt).days,
