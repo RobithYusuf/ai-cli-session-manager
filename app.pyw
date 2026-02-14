@@ -770,8 +770,8 @@ class SessionCleaner:
             if index_entry:
                 fp_text = index_entry.get("firstPrompt", "")
                 summary_text = index_entry.get("summary", "")
-                # Clean firstPrompt - skip system tags
-                if fp_text and (fp_text.startswith("<local-command") or fp_text == "No prompt"):
+                # Clean firstPrompt - skip system/command tags
+                if fp_text and (self._is_claude_command(fp_text) or fp_text == "No prompt"):
                     fp_text = ""
                 if isinstance(summary_text, str) and summary_text.strip():
                     title = summary_text.strip()[:150]
@@ -803,7 +803,7 @@ class SessionCleaner:
                                                 content = ""
                                         if isinstance(content, str):
                                             clean = content.strip()
-                                            if clean and not clean.startswith("<local-command") and not clean.startswith("<system-reminder>"):
+                                            if clean and not self._is_claude_command(clean):
                                                 title = clean[:150]
                                                 first_chat = title
                 except:
@@ -1188,6 +1188,11 @@ class SessionCleaner:
             self.preview_text.insert("end", f"\n{self.t('and_more').format(n=len(sids) - 15)}\n", "meta")
         self.preview_text.config(state="disabled")
 
+    def _is_claude_command(self, text):
+        prefixes = ("<local-command", "<command-name>", "<command-message>",
+                     "<command-args>", "<local-command-stdout>", "<local-command-stderr>")
+        return any(text.startswith(p) for p in prefixes) or text.startswith("<system-reminder>")
+
     def _extract_content_text(self, content):
         if isinstance(content, str):
             return content
@@ -1374,7 +1379,7 @@ class SessionCleaner:
                     if idx != -1:
                         text = text[idx + len(end_tag):].strip()
                 # Skip Claude Code local command messages
-                if text.startswith("<local-command") or text.startswith("<command-name>") or text.startswith("<local-command-stdout>"):
+                if self._is_claude_command(text):
                     continue
                 if not text:
                     continue
