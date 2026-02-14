@@ -6,6 +6,10 @@ Desktop GUI app to browse, preview, and bulk-delete chat session files from AI c
 ![Platform](https://img.shields.io/badge/Platform-Windows%20|%20macOS%20|%20Linux-lightgrey)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+## Screenshot
+
+![AI Session Cleaner](screenshots/preview-ui.png)
+
 ## Supported Tools
 
 | Tool | Session Location | Format |
