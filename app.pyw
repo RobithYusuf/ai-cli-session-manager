@@ -18,6 +18,7 @@ class SessionCleaner:
             "newest": "Terbaru", "oldest": "Terlama", "a_z": "A-Z", "z_a": "Z-A",
             "no_group": "Tanpa Group", "date": "Tanggal", "month": "Bulan", "age": "Umur",
             "col_date": "Tanggal", "col_title": "Judul Percakapan",
+            "col_first_chat": "Chat Pertama",
             "col_size": "Ukuran", "col_age": "Umur",
             "select_all": "Pilih Semua", "deselect": "Batal Pilih",
             "invert": "Balik Pilihan", "select_blank": "Pilih Kosong",
@@ -65,6 +66,7 @@ class SessionCleaner:
             "newest": "Newest", "oldest": "Oldest", "a_z": "A-Z", "z_a": "Z-A",
             "no_group": "No Group", "date": "Date", "month": "Month", "age": "Age",
             "col_date": "Date", "col_title": "Conversation Title",
+            "col_first_chat": "First Chat",
             "col_size": "Size", "col_age": "Age",
             "select_all": "Select All", "deselect": "Deselect",
             "invert": "Invert Selection", "select_blank": "Select Blank",
@@ -318,7 +320,7 @@ class SessionCleaner:
         tree_frame = ttk.Frame(self.paned)
         self.paned.add(tree_frame, minsize=200)
 
-        cols = ("source", "project", "date", "title", "size", "age")
+        cols = ("source", "project", "date", "title", "first_chat", "size", "age")
         self.tree = ttk.Treeview(tree_frame, columns=cols, show="tree headings",
                                  selectmode="extended")
 
@@ -327,16 +329,18 @@ class SessionCleaner:
         self.tree.heading("project", text="Project", command=lambda: self._sort_click("project"))
         self.tree.heading("date", text=self.t("col_date"), command=lambda: self._sort_click("date"))
         self.tree.heading("title", text=self.t("col_title"), command=lambda: self._sort_click("title"))
+        self.tree.heading("first_chat", text=self.t("col_first_chat"))
         self.tree.heading("size", text=self.t("col_size"), command=lambda: self._sort_click("size"))
         self.tree.heading("age", text=self.t("col_age"), command=lambda: self._sort_click("age"))
 
         self.tree.column("#0", width=30, minwidth=30, stretch=False)
         self.tree.column("source", width=0, minwidth=0, stretch=False)
-        self.tree.column("project", width=160, minwidth=100)
-        self.tree.column("date", width=130, minwidth=110, stretch=False)
-        self.tree.column("title", width=400, minwidth=200)
-        self.tree.column("size", width=70, minwidth=50, stretch=False, anchor="e")
-        self.tree.column("age", width=80, minwidth=60, stretch=False, anchor="e")
+        self.tree.column("project", width=140, minwidth=80)
+        self.tree.column("date", width=120, minwidth=100, stretch=False)
+        self.tree.column("title", width=250, minwidth=150)
+        self.tree.column("first_chat", width=250, minwidth=150)
+        self.tree.column("size", width=65, minwidth=50, stretch=False, anchor="e")
+        self.tree.column("age", width=75, minwidth=55, stretch=False, anchor="e")
 
         vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
         hsb = ttk.Scrollbar(tree_frame, orient="horizontal", command=self.tree.xview)
@@ -486,6 +490,7 @@ class SessionCleaner:
         self.lbl_group.config(text=self.t("group_label"))
         self.tree.heading("date", text=self.t("col_date"))
         self.tree.heading("title", text=self.t("col_title"))
+        self.tree.heading("first_chat", text=self.t("col_first_chat"))
         self.tree.heading("size", text=self.t("col_size"))
         self.tree.heading("age", text=self.t("col_age"))
         self.preview_title_label.config(text=self.t("preview"))
@@ -634,6 +639,7 @@ class SessionCleaner:
 
             no_title = self.t("no_title")
             title = no_title
+            first_chat = ""
             line_count = 0
             msg_count = 0
             first_user_msg = ""
@@ -645,10 +651,13 @@ class SessionCleaner:
                             raw_line = raw_line.strip()
                             if raw_line:
                                 data = json.loads(raw_line)
-                                if data.get("title"):
-                                    title = data["title"][:150]
-                                elif data.get("sessionTitle"):
-                                    title = data["sessionTitle"][:150]
+                                raw_title = data.get("title", "")
+                                session_title = data.get("sessionTitle", "")
+                                if session_title:
+                                    title = session_title[:150]
+                                    first_chat = raw_title[:150] if raw_title else ""
+                                elif raw_title:
+                                    title = raw_title[:150]
                         if line_count > 50:
                             msg_count = 99
                             break
@@ -678,6 +687,8 @@ class SessionCleaner:
 
             if title == no_title and first_user_msg:
                 title = first_user_msg
+            if not first_chat and first_user_msg:
+                first_chat = first_user_msg
 
             is_blank = (size == 0 or msg_count == 0 or
                         (title.lower() in ("new session", no_title.lower()) and msg_count <= 1))
@@ -690,7 +701,7 @@ class SessionCleaner:
                 "source": "factory", "project": project,
                 "mtime": mtime, "date_str": dt.strftime("%Y-%m-%d %H:%M"),
                 "date_date": dt.strftime("%Y-%m-%d"), "date_month": dt.strftime("%Y-%m"),
-                "date_obj": dt, "title": title,
+                "date_obj": dt, "title": title, "first_chat": first_chat,
                 "size": size, "size_str": self.fmt_size(size),
                 "age_str": self.fmt_age(dt),
                 "age_days": (datetime.now() - dt).days,
@@ -789,7 +800,7 @@ class SessionCleaner:
                 "source": "claude", "project": project,
                 "mtime": mtime, "date_str": dt.strftime("%Y-%m-%d %H:%M"),
                 "date_date": dt.strftime("%Y-%m-%d"), "date_month": dt.strftime("%Y-%m"),
-                "date_obj": dt, "title": title,
+                "date_obj": dt, "title": title, "first_chat": title,
                 "size": size, "size_str": self.fmt_size(size),
                 "age_str": self.fmt_age(dt),
                 "age_days": (datetime.now() - dt).days,
@@ -873,7 +884,7 @@ class SessionCleaner:
                 "source": "codex", "project": project,
                 "mtime": mtime, "date_str": dt.strftime("%Y-%m-%d %H:%M"),
                 "date_date": dt.strftime("%Y-%m-%d"), "date_month": dt.strftime("%Y-%m"),
-                "date_obj": dt, "title": title,
+                "date_obj": dt, "title": title, "first_chat": title,
                 "size": size, "size_str": self.fmt_size(size),
                 "age_str": self.fmt_age(dt),
                 "age_days": (datetime.now() - dt).days,
@@ -957,6 +968,7 @@ class SessionCleaner:
                 "mtime": dt.timestamp(), "date_str": dt.strftime("%Y-%m-%d %H:%M"),
                 "date_date": dt.strftime("%Y-%m-%d"), "date_month": dt.strftime("%Y-%m"),
                 "date_obj": dt, "title": title or self.t("no_title"),
+                "first_chat": title or "",
                 "size": size, "size_str": self.fmt_size(size),
                 "age_str": self.fmt_age(dt),
                 "age_days": (datetime.now() - dt).days,
@@ -1042,7 +1054,7 @@ class SessionCleaner:
                 tags = (tag, "blank") if s.get("is_blank") else (tag,)
                 self.tree.insert("", "end", iid=s["id"],
                                values=("", s["project"], s["date_str"], s["title"],
-                                       s["size_str"], s["age_str"]),
+                                       s.get("first_chat", ""), s["size_str"], s["age_str"]),
                                tags=tags)
         else:
             groups = defaultdict(list)
@@ -1075,7 +1087,7 @@ class SessionCleaner:
                 gid = f"__group_{gidx}"
 
                 self.tree.insert("", "end", iid=gid, text="",
-                               values=("", f"{key}", self.t("n_session").format(n=len(items)), "", total, ""),
+                               values=("", f"{key}", self.t("n_session").format(n=len(items)), "", "", total, ""),
                                tags=("group",), open=True)
 
                 for s in items:
@@ -1083,7 +1095,7 @@ class SessionCleaner:
                     tags = (tag, "blank") if s.get("is_blank") else (tag,)
                     self.tree.insert(gid, "end", iid=s["id"],
                                    values=("", s["project"], s["date_str"], s["title"],
-                                           s["size_str"], s["age_str"]),
+                                           s.get("first_chat", ""), s["size_str"], s["age_str"]),
                                    tags=tags)
 
         self.status_label.config(
