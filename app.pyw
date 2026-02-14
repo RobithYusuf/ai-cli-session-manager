@@ -1373,6 +1373,9 @@ class SessionCleaner:
                     idx = text.find(end_tag)
                     if idx != -1:
                         text = text[idx + len(end_tag):].strip()
+                # Skip Claude Code local command messages
+                if text.startswith("<local-command") or text.startswith("<command-name>") or text.startswith("<local-command-stdout>"):
+                    continue
                 if not text:
                     continue
 
