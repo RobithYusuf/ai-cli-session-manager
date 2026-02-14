@@ -767,18 +767,20 @@ class SessionCleaner:
             title = no_title
             first_chat = ""
             msg_count = 0
+            has_real_user_msg = False
             if index_entry:
                 fp_text = index_entry.get("firstPrompt", "")
                 summary_text = index_entry.get("summary", "")
-                # Clean firstPrompt - skip system/command tags
                 if fp_text and (self._is_claude_command(fp_text) or fp_text == "No prompt"):
                     fp_text = ""
                 if isinstance(summary_text, str) and summary_text.strip():
                     title = summary_text.strip()[:150]
                     first_chat = fp_text[:150] if fp_text else ""
+                    has_real_user_msg = True
                 elif fp_text:
                     title = fp_text[:150]
                     first_chat = fp_text[:150]
+                    has_real_user_msg = True
                 msg_count = index_entry.get("messageCount", 0)
             else:
                 try:
@@ -804,6 +806,7 @@ class SessionCleaner:
                                         if isinstance(content, str):
                                             clean = content.strip()
                                             if clean and not self._is_claude_command(clean):
+                                                has_real_user_msg = True
                                                 if title == no_title:
                                                     title = clean[:150]
                                                 if not first_chat:
@@ -813,6 +816,7 @@ class SessionCleaner:
 
             is_blank = (size == 0 or
                         (msg_count == 0 and os.path.getsize(filepath) < 100) or
+                        (not has_real_user_msg and title == no_title) or
                         (title.lower().startswith("[request interrupted") and msg_count <= 2))
 
             dt = datetime.fromtimestamp(mtime)
@@ -1193,7 +1197,8 @@ class SessionCleaner:
 
     def _is_claude_command(self, text):
         prefixes = ("<local-command", "<command-name>", "<command-message>",
-                     "<command-args>", "<local-command-stdout>", "<local-command-stderr>")
+                     "<command-args>", "<local-command-stdout>", "<local-command-stderr>",
+                     "<local-command-caveat>")
         return any(text.startswith(p) for p in prefixes) or text.startswith("<system-reminder>")
 
     def _extract_content_text(self, content):
