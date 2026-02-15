@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 import json
 import os
 import shutil
+import subprocess
 from datetime import datetime, timedelta
 from collections import defaultdict
 
@@ -56,6 +57,13 @@ class SessionCleaner:
             "this_week": "Minggu ini", "this_month": "Bulan ini",
             "1_3m": "1-3 bulan lalu", "3_6m": "3-6 bulan lalu",
             "6_12m": "6-12 bulan lalu", ">1y": "> 1 tahun lalu",
+            "open_session": "Buka Session",
+            "open_session_tip": "Buka terminal dan resume session ini",
+            "open_no_support": "Resume session tidak tersedia untuk {src}",
+            "open_no_dir": "Folder project tidak ditemukan:\n{path}",
+            "open_factory_info": "Droid akan dibuka di folder project.\nKetik /sessions untuk memilih session.",
+            "open_opencode_info": "OpenCode akan dibuka di folder project.",
+            "copied_sid": "Session ID disalin ke clipboard",
         },
         "en": {
             "size": "Size", "blank": "Blank", "showing": "Showing",
@@ -104,6 +112,13 @@ class SessionCleaner:
             "this_week": "This Week", "this_month": "This Month",
             "1_3m": "1-3 months ago", "3_6m": "3-6 months ago",
             "6_12m": "6-12 months ago", ">1y": "> 1 year ago",
+            "open_session": "Open Session",
+            "open_session_tip": "Open terminal and resume this session",
+            "open_no_support": "Resume session not available for {src}",
+            "open_no_dir": "Project folder not found:\n{path}",
+            "open_factory_info": "Droid will open in the project folder.\nType /sessions to select a session.",
+            "open_opencode_info": "OpenCode will open in the project folder.",
+            "copied_sid": "Session ID copied to clipboard",
         },
     }
 
@@ -353,6 +368,8 @@ class SessionCleaner:
         tree_frame.grid_columnconfigure(0, weight=1)
 
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
+        self.tree.bind("<Double-1>", self._on_tree_double_click)
+        self.tree.bind("<Button-3>", self._on_tree_right_click)
 
         self.tree.tag_configure("group", background=self.colors["group_bg"],
                                 foreground=self.colors["accent"],
@@ -432,6 +449,9 @@ class SessionCleaner:
         self.btn_del_blank = ttk.Button(btn_row, text=self.t("del_blank"), style="Warn.TButton",
                    command=self.delete_blank_sessions)
         self.btn_del_blank.pack(side="left", padx=(0, 3))
+        self.btn_open_session = ttk.Button(btn_row, text=self.t("open_session"), style="Accent.TButton",
+                   command=self._open_selected_session)
+        self.btn_open_session.pack(side="left", padx=(0, 3))
         ttk.Button(btn_row, text="Refresh", style="Accent.TButton",
                    command=self.refresh).pack(side="left", padx=(0, 3))
 
@@ -503,6 +523,7 @@ class SessionCleaner:
         self.btn_sel_30d.config(text=self.t("sel_30d"))
         self.btn_sel_90d.config(text=self.t("sel_90d"))
         self.btn_del_blank.config(text=self.t("del_blank"))
+        self.btn_open_session.config(text=self.t("open_session"))
         self.btn_del_selected.config(text=self.t("del_selected"))
         for w in (self.stat_size, self.stat_blank, self.stat_showing, self.stat_selected):
             lbl = w.master.winfo_children()[1]
@@ -1200,6 +1221,161 @@ class SessionCleaner:
                      "<command-args>", "<local-command-stdout>", "<local-command-stderr>",
                      "<local-command-caveat>")
         return any(text.startswith(p) for p in prefixes) or text.startswith("<system-reminder>")
+
+    # ── Open / Resume Session ──
+
+    def _try_resolve_path(self, base, segments):
+        if not segments:
+            return base if os.path.isdir(base) else None
+        for i in range(1, len(segments) + 1):
+            candidate = os.path.join(base, "-".join(segments[:i]))
+            if os.path.isdir(candidate):
+                result = self._try_resolve_path(candidate, segments[i:])
+                if result:
+                    return result
+        return base if os.path.isdir(base) else None
+
+    def _resolve_project_dir(self, session):
+        source = session.get("source", "")
+        folder = session.get("folder", "")
+        if source == "claude" and folder:
+            parts = folder.split("--", 1)
+            if len(parts) == 2:
+                drive = parts[0] + ":/"
+                segments = parts[1].split("-")
+                return self._try_resolve_path(drive, segments)
+        elif source == "factory" and folder:
+            stripped = folder.lstrip("-")
+            parts = stripped.split("-", 1)
+            if len(parts) == 2:
+                drive = parts[0] + ":/"
+                segments = parts[1].split("-")
+                return self._try_resolve_path(drive, segments)
+        elif source == "codex":
+            fp = session.get("filepath", "")
+            try:
+                with open(fp, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        data = json.loads(line)
+                        if data.get("type") == "session_meta":
+                            cwd = data.get("payload", {}).get("cwd", "")
+                            if cwd and os.path.isdir(cwd):
+                                return cwd
+                        break
+            except:
+                pass
+        elif source == "opencode":
+            fp = session.get("filepath", "")
+            try:
+                with open(fp, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                cwd = data.get("cwd", "") or data.get("working_directory", "")
+                if cwd and os.path.isdir(cwd):
+                    return cwd
+            except:
+                pass
+        return None
+
+    def _get_session_id(self, session):
+        sid = session.get("id", "")
+        for prefix in ("cc_", "cx_", "oc_"):
+            if sid.startswith(prefix):
+                return sid[len(prefix):]
+        return sid
+
+    def _open_session(self, session):
+        source = session.get("source", "")
+        sid = self._get_session_id(session)
+        project_dir = self._resolve_project_dir(session)
+        src_label = self.SOURCES.get(source, {}).get("label", source)
+
+        if source == "claude":
+            cmd = f'claude --resume "{sid}"'
+            cwd = project_dir or os.path.expanduser("~")
+            subprocess.Popen(
+                ["cmd", "/c", "start", "cmd", "/k", cmd],
+                cwd=cwd, shell=False
+            )
+        elif source == "codex":
+            cmd = f'codex resume "{sid}"'
+            cwd = project_dir or os.path.expanduser("~")
+            subprocess.Popen(
+                ["cmd", "/c", "start", "cmd", "/k", cmd],
+                cwd=cwd, shell=False
+            )
+        elif source == "factory":
+            cwd = project_dir
+            if not cwd:
+                messagebox.showwarning(self.t("warn"),
+                    self.t("open_no_dir").format(path=session.get("folder", "")))
+                return
+            self.root.clipboard_clear()
+            self.root.clipboard_append(sid)
+            messagebox.showinfo(self.t("open_session"), self.t("open_factory_info"))
+            subprocess.Popen(
+                ["cmd", "/c", "start", "cmd", "/k", "droid"],
+                cwd=cwd, shell=False
+            )
+        elif source == "opencode":
+            cwd = project_dir
+            if not cwd:
+                messagebox.showwarning(self.t("warn"),
+                    self.t("open_no_dir").format(path=session.get("folder", "")))
+                return
+            subprocess.Popen(
+                ["cmd", "/c", "start", "cmd", "/k", "opencode"],
+                cwd=cwd, shell=False
+            )
+        else:
+            messagebox.showinfo(self.t("warn"),
+                self.t("open_no_support").format(src=src_label))
+
+    def _open_selected_session(self):
+        sel = self.tree.selection()
+        if not sel:
+            return
+        iid = sel[0]
+        s = self.session_map.get(iid)
+        if not s:
+            return
+        self._open_session(s)
+
+    def _on_tree_double_click(self, event):
+        iid = self.tree.identify_row(event.y)
+        if not iid:
+            return
+        s = self.session_map.get(iid)
+        if not s:
+            return
+        self._open_session(s)
+
+    def _on_tree_right_click(self, event):
+        iid = self.tree.identify_row(event.y)
+        if not iid:
+            return
+        self.tree.selection_set(iid)
+        s = self.session_map.get(iid)
+        if not s:
+            return
+
+        menu = tk.Menu(self.root, tearoff=0,
+                       bg=self.colors["surface"], fg=self.colors["text"],
+                       activebackground=self.colors["accent"], activeforeground="#000",
+                       font=("Segoe UI", 9))
+        menu.add_command(label=self.t("open_session"),
+                         command=lambda: self._open_session(s))
+        menu.add_command(label="Copy Session ID",
+                         command=lambda: self._copy_session_id(s))
+        menu.tk_popup(event.x_root, event.y_root)
+
+    def _copy_session_id(self, session):
+        sid = self._get_session_id(session)
+        self.root.clipboard_clear()
+        self.root.clipboard_append(sid)
+        self.status_label.config(text=self.t("copied_sid"))
 
     def _extract_content_text(self, content):
         if isinstance(content, str):
