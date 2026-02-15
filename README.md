@@ -34,7 +34,9 @@ This tool was built to solve that problem: a single app that lets you manage ses
 - **Group by** project, date, month, or age
 - **Preview** conversation content (user/assistant messages)
 - **Open/Resume session** directly from the app (double-click, right-click, or button)
-- **Right-click context menu** -- Open Session, Copy Session ID, Delete
+- **Rename session title** -- right-click > "Rename" (Factory, Claude Code, OpenCode)
+- **Model column** -- shows which AI model was used per session
+- **Right-click context menu** -- Open Session, Rename, Copy Session ID, Delete
 - **Language toggle** -- Indonesian / English (ID/EN)
 - **Color-coded** projects for quick visual identification
 - **Detect empty/blank sessions** (no messages, "New Session" without conversation)

@@ -64,6 +64,10 @@ class SessionCleaner:
             "open_factory_info": "Droid akan dibuka di folder project.\nKetik /sessions untuk memilih session.",
             "open_opencode_info": "OpenCode akan dibuka di folder project.",
             "copied_sid": "Session ID disalin ke clipboard",
+            "rename_title": "Rename Judul",
+            "rename_prompt": "Masukkan judul baru:",
+            "rename_success": "Judul berhasil diubah",
+            "rename_no_support": "Rename tidak tersedia untuk Codex CLI",
         },
         "en": {
             "size": "Size", "blank": "Blank", "showing": "Showing",
@@ -119,6 +123,10 @@ class SessionCleaner:
             "open_factory_info": "Droid will open in the project folder.\nType /sessions to select a session.",
             "open_opencode_info": "OpenCode will open in the project folder.",
             "copied_sid": "Session ID copied to clipboard",
+            "rename_title": "Rename Title",
+            "rename_prompt": "Enter new title:",
+            "rename_success": "Title renamed successfully",
+            "rename_no_support": "Rename not available for Codex CLI",
         },
     }
 
@@ -335,7 +343,7 @@ class SessionCleaner:
         tree_frame = ttk.Frame(self.paned)
         self.paned.add(tree_frame, minsize=200)
 
-        cols = ("source", "project", "date", "title", "first_chat", "size", "age")
+        cols = ("source", "project", "date", "title", "first_chat", "model", "size", "age")
         self.tree = ttk.Treeview(tree_frame, columns=cols, show="tree headings",
                                  selectmode="extended")
 
@@ -345,15 +353,17 @@ class SessionCleaner:
         self.tree.heading("date", text=self.t("col_date"), command=lambda: self._sort_click("date"))
         self.tree.heading("title", text=self.t("col_title"), command=lambda: self._sort_click("title"))
         self.tree.heading("first_chat", text=self.t("col_first_chat"))
+        self.tree.heading("model", text="Model", command=lambda: self._sort_click("model"))
         self.tree.heading("size", text=self.t("col_size"), command=lambda: self._sort_click("size"))
         self.tree.heading("age", text=self.t("col_age"), command=lambda: self._sort_click("age"))
 
         self.tree.column("#0", width=30, minwidth=30, stretch=False)
         self.tree.column("source", width=0, minwidth=0, stretch=False)
-        self.tree.column("project", width=140, minwidth=80)
+        self.tree.column("project", width=110, minwidth=70)
         self.tree.column("date", width=120, minwidth=100, stretch=False)
-        self.tree.column("title", width=250, minwidth=150)
-        self.tree.column("first_chat", width=250, minwidth=150)
+        self.tree.column("title", width=220, minwidth=120)
+        self.tree.column("first_chat", width=180, minwidth=100)
+        self.tree.column("model", width=170, minwidth=100)
         self.tree.column("size", width=65, minwidth=50, stretch=False, anchor="e")
         self.tree.column("age", width=75, minwidth=55, stretch=False, anchor="e")
 
@@ -654,9 +664,16 @@ class SessionCleaner:
             sid = os.path.basename(filepath).replace(".jsonl", "")
             mtime = os.path.getmtime(filepath)
             size = os.path.getsize(filepath)
+            model = ""
             settings = filepath.replace(".jsonl", ".settings.json")
             if os.path.exists(settings):
                 size += os.path.getsize(settings)
+                try:
+                    with open(settings, "r", encoding="utf-8") as sf:
+                        sdata = json.load(sf)
+                    model = sdata.get("model", "")
+                except:
+                    pass
 
             no_title = self.t("no_title")
             title = no_title
@@ -723,6 +740,7 @@ class SessionCleaner:
                 "mtime": mtime, "date_str": dt.strftime("%Y-%m-%d %H:%M"),
                 "date_date": dt.strftime("%Y-%m-%d"), "date_month": dt.strftime("%Y-%m"),
                 "date_obj": dt, "title": title, "first_chat": first_chat,
+                "model": model,
                 "size": size, "size_str": self.fmt_size(size),
                 "age_str": self.fmt_age(dt),
                 "age_days": (datetime.now() - dt).days,
@@ -788,6 +806,7 @@ class SessionCleaner:
             title = no_title
             first_chat = ""
             msg_count = 0
+            model = ""
             has_real_user_msg = False
             if index_entry:
                 fp_text = index_entry.get("firstPrompt", "")
@@ -803,14 +822,21 @@ class SessionCleaner:
                     first_chat = fp_text[:150]
                     has_real_user_msg = True
                 msg_count = index_entry.get("messageCount", 0)
-            else:
-                try:
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        for line in f:
-                            line = line.strip()
-                            if not line:
-                                continue
-                            data = json.loads(line)
+
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        data = json.loads(line)
+                        if data.get("type") == "assistant" and not model:
+                            msg = data.get("message", {})
+                            if isinstance(msg, dict):
+                                model = msg.get("model", "")
+                            if index_entry:
+                                break
+                        if not index_entry:
                             if data.get("type") in ("user", "human", "assistant"):
                                 msg_count += 1
                                 if data.get("type") in ("user", "human") and (title == no_title or not first_chat):
@@ -832,8 +858,8 @@ class SessionCleaner:
                                                     title = clean[:150]
                                                 if not first_chat:
                                                     first_chat = clean[:150]
-                except:
-                    pass
+            except:
+                pass
 
             is_blank = (size == 0 or
                         (msg_count == 0 and os.path.getsize(filepath) < 100) or
@@ -848,6 +874,7 @@ class SessionCleaner:
                 "mtime": mtime, "date_str": dt.strftime("%Y-%m-%d %H:%M"),
                 "date_date": dt.strftime("%Y-%m-%d"), "date_month": dt.strftime("%Y-%m"),
                 "date_obj": dt, "title": title, "first_chat": first_chat or title,
+                "model": model,
                 "size": size, "size_str": self.fmt_size(size),
                 "age_str": self.fmt_age(dt),
                 "age_days": (datetime.now() - dt).days,
@@ -882,6 +909,7 @@ class SessionCleaner:
             no_title = self.t("no_title")
             title = no_title
             project = "(unknown)"
+            model = ""
             msg_count = 0
             try:
                 with open(filepath, "r", encoding="utf-8") as f:
@@ -902,6 +930,8 @@ class SessionCleaner:
                             if cwd:
                                 project = self.get_project_name(
                                     cwd.replace("\\", "-").replace("/", "-").replace(":", "").lstrip("-"))
+                        elif t == "turn_context" and not model:
+                            model = payload.get("model", "")
                         elif t == "event_msg":
                             msg_text = payload.get("message", "")
                             if msg_text and title == no_title:
@@ -932,6 +962,7 @@ class SessionCleaner:
                 "mtime": mtime, "date_str": dt.strftime("%Y-%m-%d %H:%M"),
                 "date_date": dt.strftime("%Y-%m-%d"), "date_month": dt.strftime("%Y-%m"),
                 "date_obj": dt, "title": title, "first_chat": title,
+                "model": model,
                 "size": size, "size_str": self.fmt_size(size),
                 "age_str": self.fmt_age(dt),
                 "age_days": (datetime.now() - dt).days,
@@ -1037,6 +1068,7 @@ class SessionCleaner:
                 "date_date": dt.strftime("%Y-%m-%d"), "date_month": dt.strftime("%Y-%m"),
                 "date_obj": dt, "title": title or self.t("no_title"),
                 "first_chat": first_user_msg or "",
+                "model": "",
                 "size": size, "size_str": self.fmt_size(size),
                 "age_str": self.fmt_age(dt),
                 "age_days": (datetime.now() - dt).days,
@@ -1122,7 +1154,8 @@ class SessionCleaner:
                 tags = (tag, "blank") if s.get("is_blank") else (tag,)
                 self.tree.insert("", "end", iid=s["id"],
                                values=("", s["project"], s["date_str"], s["title"],
-                                       s.get("first_chat", ""), s["size_str"], s["age_str"]),
+                                       s.get("first_chat", ""), s.get("model", ""),
+                                       s["size_str"], s["age_str"]),
                                tags=tags)
         else:
             groups = defaultdict(list)
@@ -1155,7 +1188,7 @@ class SessionCleaner:
                 gid = f"__group_{gidx}"
 
                 self.tree.insert("", "end", iid=gid, text="",
-                               values=("", f"{key}", self.t("n_session").format(n=len(items)), "", "", total, ""),
+                               values=("", f"{key}", self.t("n_session").format(n=len(items)), "", "", "", total, ""),
                                tags=("group",), open=True)
 
                 for s in items:
@@ -1163,7 +1196,8 @@ class SessionCleaner:
                     tags = (tag, "blank") if s.get("is_blank") else (tag,)
                     self.tree.insert(gid, "end", iid=s["id"],
                                    values=("", s["project"], s["date_str"], s["title"],
-                                           s.get("first_chat", ""), s["size_str"], s["age_str"]),
+                                           s.get("first_chat", ""), s.get("model", ""),
+                                           s["size_str"], s["age_str"]),
                                    tags=tags)
 
         self.status_label.config(
@@ -1367,6 +1401,8 @@ class SessionCleaner:
                        font=("Segoe UI", 9))
         menu.add_command(label=self.t("open_session"),
                          command=lambda: self._open_session(s))
+        menu.add_command(label=self.t("rename_title"),
+                         command=lambda: self._rename_session(s))
         menu.add_command(label="Copy Session ID",
                          command=lambda: self._copy_session_id(s))
         menu.add_separator()
@@ -1379,6 +1415,126 @@ class SessionCleaner:
         self.root.clipboard_clear()
         self.root.clipboard_append(sid)
         self.status_label.config(text=self.t("copied_sid"))
+
+    def _ask_rename(self, current_title):
+        dlg = tk.Toplevel(self.root)
+        dlg.title(self.t("rename_title"))
+        dlg.configure(bg=self.colors["bg"])
+        dlg.resizable(False, False)
+        dlg.transient(self.root)
+        dlg.grab_set()
+
+        w, h = 500, 150
+        x = self.root.winfo_x() + (self.root.winfo_width() - w) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - h) // 2
+        dlg.geometry(f"{w}x{h}+{x}+{y}")
+
+        result = {"value": None}
+
+        tk.Label(dlg, text=self.t("rename_prompt"),
+                 bg=self.colors["bg"], fg=self.colors["text"],
+                 font=("Segoe UI", 10)).pack(padx=20, pady=(16, 6), anchor="w")
+
+        entry = tk.Entry(dlg, font=("Segoe UI", 11), width=50,
+                         bg=self.colors["surface2"], fg=self.colors["text"],
+                         insertbackground=self.colors["text"],
+                         borderwidth=0, highlightthickness=1,
+                         highlightcolor=self.colors["accent"],
+                         highlightbackground=self.colors["border"])
+        entry.pack(padx=20, ipady=6, fill="x")
+        entry.insert(0, current_title)
+        entry.select_range(0, "end")
+        entry.focus_set()
+
+        btn_frame = tk.Frame(dlg, bg=self.colors["bg"])
+        btn_frame.pack(pady=(12, 16), padx=20, fill="x")
+
+        def on_ok(*_):
+            result["value"] = entry.get().strip()
+            dlg.destroy()
+
+        def on_cancel(*_):
+            dlg.destroy()
+
+        tk.Button(btn_frame, text="OK", font=("Segoe UI", 9, "bold"),
+                  bg=self.colors["accent"], fg="#000", padx=20, pady=4,
+                  cursor="hand2", command=on_ok).pack(side="right", padx=(6, 0))
+        tk.Button(btn_frame, text="Cancel", font=("Segoe UI", 9),
+                  bg=self.colors["border"], fg=self.colors["text"], padx=20, pady=4,
+                  cursor="hand2", command=on_cancel).pack(side="right")
+
+        entry.bind("<Return>", on_ok)
+        entry.bind("<Escape>", on_cancel)
+
+        dlg.wait_window()
+        return result["value"]
+
+    def _rename_session(self, session):
+        source = session.get("source", "")
+        if source == "codex":
+            messagebox.showinfo(self.t("warn"), self.t("rename_no_support"))
+            return
+
+        new_title = self._ask_rename(session.get("title", ""))
+        if not new_title:
+            return
+
+        try:
+            if source == "factory":
+                self._rename_factory(session, new_title)
+            elif source == "claude":
+                self._rename_claude(session, new_title)
+            elif source == "opencode":
+                self._rename_opencode(session, new_title)
+
+            session["title"] = new_title
+            # Update treeview
+            iid = session["id"]
+            if self.tree.exists(iid):
+                vals = list(self.tree.item(iid, "values"))
+                vals[3] = new_title  # title is index 3
+                self.tree.item(iid, values=vals)
+            self.status_label.config(text=self.t("rename_success"))
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def _rename_factory(self, session, new_title):
+        filepath = session["filepath"]
+        lines = []
+        with open(filepath, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        if lines:
+            first = json.loads(lines[0])
+            first["sessionTitle"] = new_title
+            first["isSessionTitleManuallySet"] = True
+            lines[0] = json.dumps(first, ensure_ascii=False) + "\n"
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+
+    def _rename_claude(self, session, new_title):
+        sid = self._get_session_id(session)
+        folder = session.get("folder", "")
+        projects_dir = self.SOURCES["claude"]["dir"]
+        idx_path = os.path.join(projects_dir, folder, "sessions-index.json")
+        if os.path.exists(idx_path):
+            with open(idx_path, "r", encoding="utf-8") as f:
+                idx = json.load(f)
+            for entry in idx.get("entries", []):
+                if entry.get("sessionId") == sid:
+                    entry["summary"] = new_title
+                    break
+            with open(idx_path, "w", encoding="utf-8") as f:
+                json.dump(idx, f, ensure_ascii=False, indent=2)
+        else:
+            raise FileNotFoundError(f"sessions-index.json not found for {folder}")
+
+    def _rename_opencode(self, session, new_title):
+        filepath = session["filepath"]
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        data["title"] = new_title
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
 
     def _extract_content_text(self, content):
         if isinstance(content, str):
@@ -1409,8 +1565,12 @@ class SessionCleaner:
 
         color = self.project_colors.get(s["project"], self.colors["text"])
         self.preview_title_label.config(text=s["title"], fg=color)
-        self.preview_info_label.config(
-            text=f"{s['project']}  |  {s['date_str']}  |  {s['size_str']}  |  {s['age_str']}")
+        model_str = s.get("model", "")
+        info_parts = [s['project'], s['date_str']]
+        if model_str:
+            info_parts.append(model_str)
+        info_parts.extend([s['size_str'], s['age_str']])
+        self.preview_info_label.config(text="  |  ".join(info_parts))
 
         self.preview_text.config(state="normal")
         self.preview_text.delete("1.0", "end")
