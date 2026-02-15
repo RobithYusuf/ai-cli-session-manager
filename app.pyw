@@ -208,19 +208,19 @@ class SessionCleaner:
         style.configure("Title.TLabel", background=c["bg"], foreground=c["accent"], font=("Segoe UI", 15, "bold"))
         style.configure("Dim.TLabel", background=c["bg"], foreground=c["dim"], font=("Segoe UI", 9))
 
-        style.configure("TButton", font=("Segoe UI", 9), padding=(10, 5),
+        style.configure("TButton", font=("Segoe UI", 8), padding=(6, 3),
                         background=c["border"], foreground=c["text"])
         style.map("TButton", background=[("active", "#3a3a5a")])
 
-        style.configure("Accent.TButton", font=("Segoe UI", 9, "bold"), padding=(10, 5),
+        style.configure("Accent.TButton", font=("Segoe UI", 8, "bold"), padding=(6, 3),
                         background=c["accent"], foreground="#000")
         style.map("Accent.TButton", background=[("active", "#00b894")])
 
-        style.configure("Danger.TButton", font=("Segoe UI", 10, "bold"), padding=(14, 7),
+        style.configure("Danger.TButton", font=("Segoe UI", 9, "bold"), padding=(8, 4),
                         background=c["danger"], foreground="#fff")
         style.map("Danger.TButton", background=[("active", "#c0392b")])
 
-        style.configure("Warn.TButton", font=("Segoe UI", 9, "bold"), padding=(10, 5),
+        style.configure("Warn.TButton", font=("Segoe UI", 8, "bold"), padding=(6, 3),
                         background=c["warn"], foreground="#000")
         style.map("Warn.TButton", background=[("active", "#d48b00")])
 
@@ -426,34 +426,34 @@ class SessionCleaner:
         btn_row.pack(fill="x")
 
         self.btn_select_all = ttk.Button(btn_row, text=self.t("select_all"), command=self.select_all)
-        self.btn_select_all.pack(side="left", padx=(0, 3))
+        self.btn_select_all.pack(side="left", padx=(0, 2))
         self.btn_deselect = ttk.Button(btn_row, text=self.t("deselect"), command=self.deselect_all)
-        self.btn_deselect.pack(side="left", padx=(0, 3))
+        self.btn_deselect.pack(side="left", padx=(0, 2))
         self.btn_invert = ttk.Button(btn_row, text=self.t("invert"), command=self.invert_selection)
-        self.btn_invert.pack(side="left", padx=(0, 3))
+        self.btn_invert.pack(side="left", padx=(0, 2))
 
-        tk.Frame(btn_row, width=1, bg=self.colors["border"]).pack(side="left", fill="y", padx=8, pady=2)
+        tk.Frame(btn_row, width=1, bg=self.colors["border"]).pack(side="left", fill="y", padx=5, pady=2)
 
         self.btn_sel_blank = ttk.Button(btn_row, text=self.t("select_blank"), style="Warn.TButton",
                    command=self.select_blank)
-        self.btn_sel_blank.pack(side="left", padx=(0, 3))
+        self.btn_sel_blank.pack(side="left", padx=(0, 2))
         self.btn_sel_7d = ttk.Button(btn_row, text=self.t("sel_7d"), command=lambda: self.select_by_age(7))
-        self.btn_sel_7d.pack(side="left", padx=(0, 3))
+        self.btn_sel_7d.pack(side="left", padx=(0, 2))
         self.btn_sel_30d = ttk.Button(btn_row, text=self.t("sel_30d"), command=lambda: self.select_by_age(30))
-        self.btn_sel_30d.pack(side="left", padx=(0, 3))
+        self.btn_sel_30d.pack(side="left", padx=(0, 2))
         self.btn_sel_90d = ttk.Button(btn_row, text=self.t("sel_90d"), command=lambda: self.select_by_age(90))
-        self.btn_sel_90d.pack(side="left", padx=(0, 3))
+        self.btn_sel_90d.pack(side="left", padx=(0, 2))
 
-        tk.Frame(btn_row, width=1, bg=self.colors["border"]).pack(side="left", fill="y", padx=8, pady=2)
+        tk.Frame(btn_row, width=1, bg=self.colors["border"]).pack(side="left", fill="y", padx=5, pady=2)
 
         self.btn_del_blank = ttk.Button(btn_row, text=self.t("del_blank"), style="Warn.TButton",
                    command=self.delete_blank_sessions)
-        self.btn_del_blank.pack(side="left", padx=(0, 3))
+        self.btn_del_blank.pack(side="left", padx=(0, 2))
         self.btn_open_session = ttk.Button(btn_row, text=self.t("open_session"), style="Accent.TButton",
                    command=self._open_selected_session)
-        self.btn_open_session.pack(side="left", padx=(0, 3))
+        self.btn_open_session.pack(side="left", padx=(0, 2))
         ttk.Button(btn_row, text="Refresh", style="Accent.TButton",
-                   command=self.refresh).pack(side="left", padx=(0, 3))
+                   command=self.refresh).pack(side="left", padx=(0, 2))
 
         self.btn_del_selected = ttk.Button(btn_row, text=self.t("del_selected"), style="Danger.TButton",
                    command=self.delete_selected)
