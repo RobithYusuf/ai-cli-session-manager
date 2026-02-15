@@ -1369,6 +1369,9 @@ class SessionCleaner:
                          command=lambda: self._open_session(s))
         menu.add_command(label="Copy Session ID",
                          command=lambda: self._copy_session_id(s))
+        menu.add_separator()
+        menu.add_command(label=self.t("del_selected"),
+                         command=self.delete_selected)
         menu.tk_popup(event.x_root, event.y_root)
 
     def _copy_session_id(self, session):
