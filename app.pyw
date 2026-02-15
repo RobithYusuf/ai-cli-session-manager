@@ -298,37 +298,53 @@ class SessionCleaner:
         self.lbl_search.pack(side="left")
         self.search_var = tk.StringVar()
         self.search_var.trace("w", self.apply_filters)
-        tk.Entry(tb1, textvariable=self.search_var, width=28,
+        tk.Entry(tb1, textvariable=self.search_var, width=20,
                  bg=self.colors["surface2"], fg=self.colors["text"],
                  insertbackground=self.colors["text"], font=("Segoe UI", 9),
                  borderwidth=0, highlightthickness=1,
                  highlightcolor=self.colors["accent"],
-                 highlightbackground=self.colors["border"]).pack(side="left", padx=(4, 12), ipady=3)
+                 highlightbackground=self.colors["border"]).pack(side="left", padx=(4, 8), ipady=3)
 
         ttk.Label(tb1, text="Project:", style="Dim.TLabel").pack(side="left")
         self.project_var = tk.StringVar(value=self.t("all"))
-        self.project_combo = ttk.Combobox(tb1, textvariable=self.project_var, width=25, state="readonly")
-        self.project_combo.pack(side="left", padx=(4, 12))
-        self.project_combo.bind("<<ComboboxSelected>>", self.apply_filters)
+
+        # Searchable project entry
+        self.project_entry = tk.Entry(tb1, textvariable=self.project_var, width=18,
+                 bg=self.colors["surface2"], fg=self.colors["text"],
+                 insertbackground=self.colors["text"], font=("Segoe UI", 9),
+                 borderwidth=0, highlightthickness=1,
+                 highlightcolor=self.colors["accent"],
+                 highlightbackground=self.colors["border"])
+        self.project_entry.pack(side="left", padx=(4, 0), ipady=3)
+        self.project_entry.bind("<KeyRelease>", self._on_project_search)
+        self.project_entry.bind("<FocusIn>", self._on_project_focus_in)
+        self.project_entry.bind("<Escape>", lambda e: self._close_project_dropdown())
+
+        self.project_listbox_frame = None
+        self.project_listbox = None
+        self._all_projects_list = []
+
+        self.project_count_label = ttk.Label(tb1, text="", style="Dim.TLabel")
+        self.project_count_label.pack(side="left", padx=(2, 8))
 
         self.lbl_time = ttk.Label(tb1, text=self.t("time"), style="Dim.TLabel")
         self.lbl_time.pack(side="left")
         self.date_var = tk.StringVar()
-        self.date_combo = ttk.Combobox(tb1, textvariable=self.date_var, width=12, state="readonly")
-        self.date_combo.pack(side="left", padx=(4, 12))
+        self.date_combo = ttk.Combobox(tb1, textvariable=self.date_var, width=10, state="readonly")
+        self.date_combo.pack(side="left", padx=(4, 8))
         self.date_var.trace("w", self.apply_filters)
 
         self.lbl_sort = ttk.Label(tb1, text=self.t("sort_label"), style="Dim.TLabel")
         self.lbl_sort.pack(side="left")
         self.sort_var = tk.StringVar()
-        self.sort_combo = ttk.Combobox(tb1, textvariable=self.sort_var, width=10, state="readonly")
-        self.sort_combo.pack(side="left", padx=(4, 12))
+        self.sort_combo = ttk.Combobox(tb1, textvariable=self.sort_var, width=8, state="readonly")
+        self.sort_combo.pack(side="left", padx=(4, 8))
         self.sort_var.trace("w", self.apply_filters)
 
         self.lbl_group = ttk.Label(tb1, text=self.t("group_label"), style="Dim.TLabel")
         self.lbl_group.pack(side="left")
         self.group_var = tk.StringVar()
-        self.group_combo = ttk.Combobox(tb1, textvariable=self.group_var, width=12, state="readonly")
+        self.group_combo = ttk.Combobox(tb1, textvariable=self.group_var, width=10, state="readonly")
         self.group_combo.pack(side="left", padx=(4, 0))
         self.group_var.trace("w", self.apply_filters)
 
@@ -492,6 +508,113 @@ class SessionCleaner:
                 btn.config(bg=c["border"], fg=c["text"], relief="raised")
         self.title_label.config(foreground=accent)
 
+    # ── Searchable Project Dropdown ──
+
+    def _on_project_focus_in(self, event):
+        self.project_entry.select_range(0, "end")
+        self._show_project_dropdown()
+
+    def _on_project_search(self, event):
+        if event.keysym in ("Return", "Tab"):
+            self._select_project_from_entry()
+            self._close_project_dropdown()
+            return
+        if event.keysym in ("Escape", "Shift_L", "Shift_R", "Control_L", "Control_R"):
+            return
+        if event.keysym == "Down" and self.project_listbox:
+            self.project_listbox.focus_set()
+            if self.project_listbox.size() > 0:
+                self.project_listbox.selection_set(0)
+            return
+        self._show_project_dropdown()
+
+    def _show_project_dropdown(self):
+        typed = self.project_var.get().lower()
+        all_label = self.t("all")
+        matches = [all_label]
+        for p in self._all_projects_list:
+            if typed and typed != all_label.lower() and typed not in p.lower():
+                continue
+            matches.append(p)
+
+        if self.project_listbox_frame:
+            self._close_project_dropdown()
+
+        if not matches:
+            return
+
+        self.project_listbox_frame = tk.Frame(self.root, bg=self.colors["border"])
+
+        x = self.project_entry.winfo_rootx() - self.root.winfo_rootx()
+        y = self.project_entry.winfo_rooty() - self.root.winfo_rooty() + self.project_entry.winfo_height()
+        w = max(self.project_entry.winfo_width(), 250)
+        h = min(len(matches) * 20 + 4, 300)
+
+        self.project_listbox_frame.place(x=x, y=y, width=w, height=h)
+        self.project_listbox_frame.lift()
+
+        self.project_listbox = tk.Listbox(self.project_listbox_frame,
+            bg=self.colors["surface2"], fg=self.colors["text"],
+            font=("Segoe UI", 9), borderwidth=0, highlightthickness=0,
+            selectbackground=self.colors["accent"], selectforeground="#000",
+            activestyle="none")
+
+        sb = ttk.Scrollbar(self.project_listbox_frame, orient="vertical",
+                           command=self.project_listbox.yview)
+        self.project_listbox.configure(yscrollcommand=sb.set)
+        sb.pack(side="right", fill="y")
+        self.project_listbox.pack(fill="both", expand=True)
+
+        for m in matches:
+            self.project_listbox.insert("end", m)
+
+        self.project_listbox.bind("<ButtonRelease-1>", self._on_project_listbox_click)
+        self.project_listbox.bind("<Return>", self._on_project_listbox_click)
+        self.project_listbox.bind("<Escape>", lambda e: self._close_project_dropdown())
+
+        self.root.bind("<Button-1>", self._on_click_outside_dropdown, add="+")
+
+    def _on_project_listbox_click(self, event):
+        sel = self.project_listbox.curselection()
+        if sel:
+            value = self.project_listbox.get(sel[0])
+            self.project_var.set(value)
+            self._close_project_dropdown()
+            self.apply_filters()
+
+    def _on_click_outside_dropdown(self, event):
+        if self.project_listbox_frame:
+            w = event.widget
+            if w != self.project_entry and w != self.project_listbox:
+                self._close_project_dropdown()
+                self._select_project_from_entry()
+
+    def _close_project_dropdown(self):
+        if self.project_listbox_frame:
+            self.project_listbox_frame.destroy()
+            self.project_listbox_frame = None
+            self.project_listbox = None
+        try:
+            self.root.unbind("<Button-1>")
+        except:
+            pass
+
+    def _select_project_from_entry(self):
+        typed = self.project_var.get()
+        if typed == self.t("all") or typed in self._all_projects_list:
+            self.apply_filters()
+            return
+        # Try partial match
+        lower = typed.lower()
+        for p in self._all_projects_list:
+            if lower == p.lower():
+                self.project_var.set(p)
+                self.apply_filters()
+                return
+        # No match, reset to all
+        self.project_var.set(self.t("all"))
+        self.apply_filters()
+
     def _toggle_language(self):
         self.current_lang = "en" if self.current_lang == "id" else "id"
         self._apply_language()
@@ -625,8 +748,13 @@ class SessionCleaner:
         self.stat_size.config(text=self.fmt_size(total_size))
         self.stat_blank.config(text=str(blank_count))
 
-        project_list = [self.t("all")] + sorted(self.projects)
-        self.project_combo["values"] = project_list
+        self._all_projects_list = sorted(self.projects)
+        # Count sessions per project
+        proj_counts = {}
+        for s in self.all_sessions:
+            p = s["project"]
+            proj_counts[p] = proj_counts.get(p, 0) + 1
+        self._project_counts = proj_counts
 
         self.apply_filters()
 
@@ -1092,7 +1220,8 @@ class SessionCleaner:
             if search:
                 if (search not in s["title"].lower()
                     and search not in s["project"].lower()
-                    and search not in s["date_str"]):
+                    and search not in s["date_str"]
+                    and search not in s.get("model", "").lower()):
                     continue
             if project_filter != self.t("all") and s["project"] != project_filter:
                 continue
@@ -1119,6 +1248,15 @@ class SessionCleaner:
             result.sort(key=lambda x: (x["project"].lower(), -x["mtime"]))
 
         self.filtered_sessions = result
+
+        # Update project count label
+        pf = project_filter
+        if pf and pf != self.t("all"):
+            cnt = self._project_counts.get(pf, 0)
+            self.project_count_label.config(text=f"({cnt})")
+        else:
+            self.project_count_label.config(text=f"({len(self._all_projects_list)} projects)")
+
         self.render_tree(group_mode)
 
     def _sort_click(self, col):
