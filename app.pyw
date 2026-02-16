@@ -37,6 +37,8 @@ class SessionCleaner:
             "no_msg_file": "(tidak ada pesan user/assistant dalam file ini)",
             "empty_file": "(file kosong atau tidak bisa dibaca)",
             "more_msg": "... masih ada pesan lainnya dalam session ini",
+            "load_more": "Muat Lebih Banyak ({n} tersisa)",
+            "showing_of": "Menampilkan {shown} dari {total} pesan",
             "error_read": "Error membaca file: {e}",
             "no_session_age": "Tidak ada session lebih dari {days} hari.",
             "blank_found": "Ditemukan {n} session kosong/blank.\nUkuran total: {size}\n\nKriteria: file 0 bytes, tidak ada pesan,\natau hanya 'New Session' tanpa percakapan.",
@@ -96,6 +98,8 @@ class SessionCleaner:
             "no_msg_file": "(no user/assistant messages in this file)",
             "empty_file": "(empty or unreadable file)",
             "more_msg": "... more messages in this session",
+            "load_more": "Load More ({n} remaining)",
+            "showing_of": "Showing {shown} of {total} messages",
             "error_read": "Error reading file: {e}",
             "no_session_age": "No sessions older than {days} days.",
             "blank_found": "Found {n} blank sessions.\nTotal size: {size}\n\nCriteria: 0 byte files, no messages,\nor 'New Session' without conversation.",
@@ -419,17 +423,42 @@ class SessionCleaner:
                                            font=("Segoe UI", 8), anchor="e", padx=10)
         self.preview_info_label.pack(side="right")
 
-        self.preview_text = tk.Text(preview_frame, wrap="word", height=5,
+        # Preview body container (text + load more button)
+        preview_body = tk.Frame(preview_frame, bg=self.colors["preview_bg"])
+        preview_body.pack(fill="both", expand=True)
+
+        self.preview_text = tk.Text(preview_body, wrap="word", height=5,
                                     bg=self.colors["preview_bg"], fg=self.colors["text"],
                                     font=("Consolas", 9), borderwidth=0,
                                     insertbackground=self.colors["text"],
-                                    padx=10, pady=6, state="disabled",
+                                    padx=12, pady=8, state="disabled",
                                     selectbackground=self.colors["border"],
-                                    selectforeground=self.colors["text"])
-        preview_sb = ttk.Scrollbar(preview_frame, orient="vertical", command=self.preview_text.yview)
+                                    selectforeground=self.colors["text"],
+                                    spacing1=1, spacing3=1)
+        preview_sb = ttk.Scrollbar(preview_body, orient="vertical", command=self.preview_text.yview)
         self.preview_text.configure(yscrollcommand=preview_sb.set)
         preview_sb.pack(side="right", fill="y")
         self.preview_text.pack(fill="both", expand=True)
+
+        # Load more button (hidden by default)
+        self.preview_loadmore_frame = tk.Frame(preview_frame, bg=self.colors["surface2"])
+        self.preview_loadmore_btn = tk.Button(self.preview_loadmore_frame,
+            text="Load More Messages", font=("Segoe UI", 8, "bold"),
+            bg=self.colors["border"], fg=self.colors["text"],
+            activebackground=self.colors["accent"], activeforeground="#000",
+            padx=16, pady=3, cursor="hand2", borderwidth=0,
+            command=self._load_more_preview)
+        self.preview_loadmore_btn.pack(pady=4)
+        self.preview_msg_count_label = tk.Label(self.preview_loadmore_frame, text="",
+            bg=self.colors["surface2"], fg=self.colors["dim"], font=("Segoe UI", 7))
+        self.preview_msg_count_label.pack()
+
+        # Preview pagination state
+        self._preview_page = 0
+        self._preview_page_size = 20
+        self._preview_messages = []
+        self._preview_current_sid = None
+        self._preview_total_available = 0
 
         self.preview_text.tag_configure("role_user", foreground=self.colors["preview_user"],
                                         font=("Consolas", 9, "bold"))
@@ -438,11 +467,15 @@ class SessionCleaner:
         self.preview_text.tag_configure("role_system", foreground=self.colors["preview_sys"],
                                         font=("Consolas", 9, "bold"))
         self.preview_text.tag_configure("content", foreground=self.colors["text"],
-                                        font=("Consolas", 9))
-        self.preview_text.tag_configure("separator", foreground=self.colors["border"],
-                                        font=("Consolas", 8))
+                                        font=("Consolas", 9), lmargin1=20, lmargin2=20)
+        self.preview_text.tag_configure("content_truncated", foreground="#7a7a8a",
+                                        font=("Consolas", 8, "italic"), lmargin1=20, lmargin2=20)
+        self.preview_text.tag_configure("separator", foreground="#2a2a3a",
+                                        font=("Consolas", 6))
         self.preview_text.tag_configure("meta", foreground=self.colors["dim"],
                                         font=("Consolas", 8, "italic"))
+        self.preview_text.tag_configure("msg_number", foreground="#555566",
+                                        font=("Consolas", 8))
 
         # Bottom bar
         bottom = ttk.Frame(self.root)
@@ -1364,8 +1397,15 @@ class SessionCleaner:
         self.preview_text.delete("1.0", "end")
         self.preview_text.insert("end", self.t("preview_click"), "meta")
         self.preview_text.config(state="disabled")
+        self.preview_loadmore_frame.pack_forget()
+        self._preview_messages = []
+        self._preview_current_sid = None
+        self._preview_page = 0
 
     def _show_multi_preview(self, sids):
+        self.preview_loadmore_frame.pack_forget()
+        self._preview_messages = []
+        self._preview_current_sid = None
         self.preview_title_label.config(text=self.t("n_selected").format(n=len(sids)), fg=self.colors["accent"])
         total_size = sum(self.session_map[s]["size"] for s in sids if s in self.session_map)
         self.preview_info_label.config(text=f"Total: {self.fmt_size(total_size)}")
@@ -1399,7 +1439,9 @@ class SessionCleaner:
     def _try_resolve_path(self, base, segments):
         if not segments:
             return base if os.path.isdir(base) else None
-        for i in range(1, len(segments) + 1):
+        # Try longest match first (greedy) to avoid partial prefix matches
+        # e.g. "svelte-obfuscation" should match before "svelte"
+        for i in range(len(segments), 0, -1):
             candidate = os.path.join(base, "-".join(segments[:i]))
             if os.path.isdir(candidate):
                 result = self._try_resolve_path(candidate, segments[i:])
@@ -1465,17 +1507,15 @@ class SessionCleaner:
         src_label = self.SOURCES.get(source, {}).get("label", source)
 
         if source == "claude":
-            cmd = f'claude --resume "{sid}"'
             cwd = project_dir or os.path.expanduser("~")
             subprocess.Popen(
-                ["cmd", "/c", "start", "cmd", "/k", cmd],
+                ["cmd", "/c", "start", "", "cmd", "/k", "claude", "--resume", sid],
                 cwd=cwd, shell=False
             )
         elif source == "codex":
-            cmd = f'codex resume "{sid}"'
             cwd = project_dir or os.path.expanduser("~")
             subprocess.Popen(
-                ["cmd", "/c", "start", "cmd", "/k", cmd],
+                ["cmd", "/c", "start", "", "cmd", "/k", "codex", "resume", sid],
                 cwd=cwd, shell=False
             )
         elif source == "factory":
@@ -1484,11 +1524,8 @@ class SessionCleaner:
                 messagebox.showwarning(self.t("warn"),
                     self.t("open_no_dir").format(path=session.get("folder", "")))
                 return
-            self.root.clipboard_clear()
-            self.root.clipboard_append(sid)
-            messagebox.showinfo(self.t("open_session"), self.t("open_factory_info"))
             subprocess.Popen(
-                ["cmd", "/c", "start", "cmd", "/k", "droid"],
+                ["cmd", "/c", "start", "", "cmd", "/k", "droid", "--resume", sid],
                 cwd=cwd, shell=False
             )
         elif source == "opencode":
@@ -1498,7 +1535,7 @@ class SessionCleaner:
                     self.t("open_no_dir").format(path=session.get("folder", "")))
                 return
             subprocess.Popen(
-                ["cmd", "/c", "start", "cmd", "/k", "opencode"],
+                ["cmd", "/c", "start", "", "cmd", "/k", "opencode"],
                 cwd=cwd, shell=False
             )
         else:
@@ -1710,29 +1747,29 @@ class SessionCleaner:
         info_parts.extend([s['size_str'], s['age_str']])
         self.preview_info_label.config(text="  |  ".join(info_parts))
 
-        self.preview_text.config(state="normal")
-        self.preview_text.delete("1.0", "end")
+        # Parse all messages once, then paginate
+        self._preview_current_sid = sid
+        self._preview_page = 0
 
         if s["source"] == "opencode":
-            self._preview_opencode(s)
+            self._preview_messages = self._parse_opencode_messages(s)
         else:
-            self._preview_jsonl(s)
+            self._preview_messages = self._parse_jsonl_messages(s)
 
-        self.preview_text.config(state="disabled")
-        self.preview_text.yview_moveto(0)
+        self._preview_total_available = len(self._preview_messages)
+        self._render_preview_page(reset=True)
 
-    def _preview_opencode(self, s):
+    def _parse_opencode_messages(self, s):
+        messages = []
         try:
             base = self.SOURCES["opencode"]["dir"]
             msg_dir = os.path.join(base, "message", s["id"].replace("oc_", ""))
             part_dir = os.path.join(base, "part")
 
             if not os.path.isdir(msg_dir):
-                self.preview_text.insert("end", self.t("no_msg"), "meta")
-                return
+                return messages
 
-            # Load messages sorted by creation time
-            messages = []
+            raw = []
             for mf in os.listdir(msg_dir):
                 if not mf.endswith(".json"):
                     continue
@@ -1744,7 +1781,6 @@ class SessionCleaner:
                     if role not in ("user", "assistant"):
                         continue
                     created = md.get("time", {}).get("created", 0)
-                    # Load text parts
                     msg_id = md.get("id", "")
                     texts = []
                     pdir = os.path.join(part_dir, msg_id)
@@ -1763,133 +1799,164 @@ class SessionCleaner:
                                 pass
                     content = "\n".join(texts).strip()
                     if content:
-                        messages.append((created, role, content))
+                        raw.append((created, role, content))
                 except:
                     pass
 
-            messages.sort(key=lambda x: x[0])
-            msg_count = 0
-            for _, role, content in messages:
-                text = content[:400] + "..." if len(content) > 400 else content
-                role_tag = "role_user" if role == "user" else "role_assistant"
-                role_label = "USER" if role == "user" else "ASSISTANT"
-                self.preview_text.insert("end", f"[{role_label}] ", role_tag)
-                self.preview_text.insert("end", f"{text}\n", "content")
-                self.preview_text.insert("end", "-" * 50 + "\n", "separator")
-                msg_count += 1
-                if msg_count >= 15:
-                    self.preview_text.insert("end",
-                        f"\n{self.t('more_msg')}\n", "meta")
-                    break
+            raw.sort(key=lambda x: x[0])
+            for _, role, content in raw:
+                messages.append({"role": role, "content": content})
+        except:
+            pass
+        return messages
 
-            if msg_count == 0:
-                self.preview_text.insert("end", self.t("no_msg_ua"), "meta")
-
-        except Exception as e:
-            self.preview_text.insert("end", f"Error: {e}", "meta")
-
-    def _preview_jsonl(self, s):
-
+    def _parse_jsonl_messages(self, s):
+        messages = []
         try:
-            entries = []
             with open(s["filepath"], "r", encoding="utf-8") as f:
                 for line_num, line in enumerate(f):
-                    if line_num >= 200:
+                    if line_num >= 500:
                         break
                     line = line.strip()
                     if not line:
                         continue
                     try:
-                        entries.append(json.loads(line))
+                        entry = json.loads(line)
                     except:
                         continue
 
-            if not entries:
-                self.preview_text.insert("end", self.t("empty_file"), "meta")
-                return
+                    entry_type = entry.get("type", "")
+                    role = ""
+                    content = ""
 
-            msg_count = 0
-            for entry in entries:
-                entry_type = entry.get("type", "")
-                role = ""
-                content = ""
-
-                # Factory format: {type:"message", message:{role, content}}
-                if entry_type == "message" and isinstance(entry.get("message"), dict):
-                    msg = entry["message"]
-                    role = msg.get("role", "")
-                    content = self._extract_content_text(msg.get("content", ""))
-
-                # Claude Code format: {type:"user"/"assistant", message:{role, content}}
-                elif entry_type in ("user", "human", "assistant") and isinstance(entry.get("message"), dict):
-                    msg = entry["message"]
-                    role = msg.get("role", "") or entry_type
-                    if role == "human":
+                    if entry_type == "message" and isinstance(entry.get("message"), dict):
+                        msg = entry["message"]
+                        role = msg.get("role", "")
+                        content = self._extract_content_text(msg.get("content", ""))
+                    elif entry_type in ("user", "human", "assistant") and isinstance(entry.get("message"), dict):
+                        msg = entry["message"]
+                        role = msg.get("role", "") or entry_type
+                        if role == "human":
+                            role = "user"
+                        content = self._extract_content_text(msg.get("content", ""))
+                    elif entry_type == "event_msg" and isinstance(entry.get("payload"), dict):
                         role = "user"
-                    content = self._extract_content_text(msg.get("content", ""))
-
-                # Codex CLI format: {type:"event_msg", payload:{message}} or {type:"response_item", payload:{role, content}}
-                elif entry_type == "event_msg" and isinstance(entry.get("payload"), dict):
-                    role = "user"
-                    raw = entry["payload"].get("message", "")
-                    marker = "My request for Codex:\n"
-                    idx = raw.find(marker)
-                    content = raw[idx + len(marker):].strip() if idx != -1 else raw.strip()
-
-                elif entry_type == "response_item" and isinstance(entry.get("payload"), dict):
-                    payload = entry["payload"]
-                    role = payload.get("role", "")
-                    if role in ("developer", "system"):
+                        raw = entry["payload"].get("message", "")
+                        marker = "My request for Codex:\n"
+                        idx = raw.find(marker)
+                        content = raw[idx + len(marker):].strip() if idx != -1 else raw.strip()
+                    elif entry_type == "response_item" and isinstance(entry.get("payload"), dict):
+                        payload = entry["payload"]
+                        role = payload.get("role", "")
+                        if role in ("developer", "system"):
+                            continue
+                        content = self._extract_content_text(payload.get("content", ""))
+                    elif entry.get("role") and entry.get("content"):
+                        role = entry["role"]
+                        content = self._extract_content_text(entry["content"])
+                    else:
                         continue
-                    content = self._extract_content_text(payload.get("content", ""))
 
-                # Generic format: {role, content} at root
-                elif entry.get("role") and entry.get("content"):
-                    role = entry["role"]
-                    content = self._extract_content_text(entry["content"])
+                    if not role or role == "system":
+                        continue
+                    if not content.strip():
+                        continue
 
-                else:
-                    continue
+                    text = self._clean_message_text(content.strip())
+                    if not text:
+                        continue
+                    if self._is_claude_command(text):
+                        continue
 
-                if not role or role == "system":
-                    continue
-                if not content.strip():
-                    continue
+                    messages.append({"role": role, "content": text})
+        except:
+            pass
+        return messages
 
-                text = content.strip()
-                # Strip system-reminder tags
-                if text.startswith("<system-reminder>"):
-                    end_tag = "</system-reminder>"
-                    idx = text.find(end_tag)
-                    if idx != -1:
-                        text = text[idx + len(end_tag):].strip()
-                # Skip Claude Code local command messages
-                if self._is_claude_command(text):
-                    continue
-                if not text:
-                    continue
+    def _clean_message_text(self, text):
+        """Strip all <system-reminder>...</system-reminder> blocks from text."""
+        import re
+        text = re.sub(r'<system-reminder>.*?</system-reminder>', '', text, flags=re.DOTALL).strip()
+        return text
 
-                if len(text) > 400:
-                    text = text[:400] + "..."
+    def _render_preview_page(self, reset=False):
+        self.preview_text.config(state="normal")
 
-                role_tag = f"role_{role}" if role in ("user", "assistant") else "role_system"
-                role_label = {"user": "USER", "assistant": "ASSISTANT"}.get(role, role.upper())
+        if reset:
+            self.preview_text.delete("1.0", "end")
+            self._preview_page = 0
 
-                self.preview_text.insert("end", f"[{role_label}] ", role_tag)
+        messages = self._preview_messages
+        if not messages:
+            self.preview_text.insert("end", self.t("no_msg_file"), "meta")
+            self.preview_text.config(state="disabled")
+            self.preview_loadmore_frame.pack_forget()
+            return
+
+        start = self._preview_page * self._preview_page_size
+        end = start + self._preview_page_size
+        page_msgs = messages[start:end]
+        total = len(messages)
+
+        for i, msg in enumerate(page_msgs):
+            msg_num = start + i + 1
+            role = msg["role"]
+            text = msg["content"]
+
+            role_tag = f"role_{role}" if role in ("user", "assistant") else "role_system"
+            role_label = {"user": "USER", "assistant": "ASSISTANT"}.get(role, role.upper())
+            role_icon = "\u25b6" if role == "user" else "\u25c0"
+
+            self.preview_text.insert("end", f"#{msg_num} ", "msg_number")
+            self.preview_text.insert("end", f"{role_icon} {role_label}\n", role_tag)
+
+            # Show more text but truncate very long messages
+            max_len = 800
+            if len(text) > max_len:
+                self.preview_text.insert("end", text[:max_len], "content")
+                remaining = len(text) - max_len
+                self.preview_text.insert("end", f"\n    ... [{remaining} chars more]\n", "content_truncated")
+            else:
                 self.preview_text.insert("end", f"{text}\n", "content")
-                self.preview_text.insert("end", "-" * 50 + "\n", "separator")
 
-                msg_count += 1
-                if msg_count >= 15:
-                    self.preview_text.insert("end",
-                        f"\n{self.t('more_msg')}\n", "meta")
-                    break
+            if msg_num < total:
+                self.preview_text.insert("end", "\u2500" * 40 + "\n", "separator")
 
-            if msg_count == 0:
-                self.preview_text.insert("end", self.t("no_msg_file"), "meta")
+        shown = min(end, total)
+        has_more = end < total
 
-        except Exception as e:
-            self.preview_text.insert("end", self.t("error_read").format(e=e), "meta")
+        # Update info label with message count
+        s = self.session_map.get(self._preview_current_sid)
+        if s:
+            model_str = s.get("model", "")
+            info_parts = [s['project'], s['date_str']]
+            if model_str:
+                info_parts.append(model_str)
+            info_parts.extend([s['size_str'], f"{shown}/{total} msgs"])
+            self.preview_info_label.config(text="  |  ".join(info_parts))
+
+        if has_more:
+            remaining = total - shown
+            self.preview_loadmore_btn.config(
+                text=self.t("load_more").format(n=remaining))
+            self.preview_msg_count_label.config(
+                text=self.t("showing_of").format(shown=shown, total=total))
+            self.preview_loadmore_frame.pack(fill="x", side="bottom")
+        else:
+            self.preview_loadmore_frame.pack_forget()
+
+        self.preview_text.config(state="disabled")
+
+        if reset:
+            self.preview_text.yview_moveto(0)
+
+    def _load_more_preview(self):
+        self._preview_page += 1
+        # Scroll position before appending
+        self.preview_text.config(state="normal")
+        # Remove trailing newline if any for clean append
+        self.preview_text.config(state="disabled")
+        self._render_preview_page(reset=False)
 
     def _delete_opencode_extras(self, s):
         base = self.SOURCES["opencode"]["dir"]
