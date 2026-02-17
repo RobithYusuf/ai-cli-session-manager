@@ -134,6 +134,10 @@ class SessionCleaner:
         },
     }
 
+    # ══════════════════════════════════════════════════════════════
+    # ── Initialization & Config ──
+    # ══════════════════════════════════════════════════════════════
+
     def __init__(self, root):
         self.root = root
         self.root.title("AI CLI Session Manager")
@@ -192,6 +196,10 @@ class SessionCleaner:
             if self.t(k) == display:
                 return k
         return display
+
+    # ══════════════════════════════════════════════════════════════
+    # ── UI Setup & Styles ──
+    # ══════════════════════════════════════════════════════════════
 
     def setup_styles(self):
         style = ttk.Style()
@@ -541,7 +549,9 @@ class SessionCleaner:
                 btn.config(bg=c["border"], fg=c["text"], relief="raised")
         self.title_label.config(foreground=accent)
 
+    # ══════════════════════════════════════════════════════════════
     # ── Searchable Project Dropdown ──
+    # ══════════════════════════════════════════════════════════════
 
     def _on_project_focus_in(self, event):
         self.project_entry.select_range(0, "end")
@@ -648,6 +658,10 @@ class SessionCleaner:
         self.project_var.set(self.t("all"))
         self.apply_filters()
 
+    # ══════════════════════════════════════════════════════════════
+    # ── Language & Localization ──
+    # ══════════════════════════════════════════════════════════════
+
     def _toggle_language(self):
         self.current_lang = "en" if self.current_lang == "id" else "id"
         self._apply_language()
@@ -709,6 +723,10 @@ class SessionCleaner:
         lbl._lang_key = label_key
         return v
 
+    # ══════════════════════════════════════════════════════════════
+    # ── Helpers & Formatting ──
+    # ══════════════════════════════════════════════════════════════
+
     def fmt_size(self, b):
         if b < 1024: return f"{b} B"
         if b < 1048576: return f"{b/1024:.1f} KB"
@@ -753,7 +771,9 @@ class SessionCleaner:
             self.project_colors[p] = self.COLOR_PALETTE[i % len(self.COLOR_PALETTE)]
         self.project_colors["(root)"] = self.colors["dim"]
 
-    # ── Loading ──
+    # ══════════════════════════════════════════════════════════════
+    # ── Session Loading & Parsing ──
+    # ══════════════════════════════════════════════════════════════
 
     def load_all_sessions(self):
         self.all_sessions = []
@@ -790,6 +810,8 @@ class SessionCleaner:
         self._project_counts = proj_counts
 
         self.apply_filters()
+
+    # ── Factory (Droid) ─────────────────────────────────────────
 
     def _load_factory_sessions(self):
         session_dir = self.SOURCES["factory"]["dir"]
@@ -910,6 +932,8 @@ class SessionCleaner:
             }
         except:
             return None
+
+    # ── Claude Code ────────────────────────────────────────────
 
     def _load_claude_sessions(self):
         projects_dir = self.SOURCES["claude"]["dir"]
@@ -1045,7 +1069,7 @@ class SessionCleaner:
         except:
             return None
 
-    # ── Codex CLI ──
+    # ── Codex CLI ────────────────────────────────────────────────
 
     def _load_codex_sessions(self):
         session_dir = self.SOURCES["codex"]["dir"]
@@ -1136,7 +1160,7 @@ class SessionCleaner:
         except:
             return None
 
-    # ── OpenCode ──
+    # ── OpenCode ──────────────────────────────────────────────────
 
     def _load_opencode_sessions(self):
         base = self.SOURCES["opencode"]["dir"]
@@ -1242,7 +1266,9 @@ class SessionCleaner:
         except:
             return None
 
-    # ── Filtering ──
+    # ══════════════════════════════════════════════════════════════
+    # ── Filtering & Sorting ──
+    # ══════════════════════════════════════════════════════════════
 
     def apply_filters(self, *args):
         search = self.search_var.get().lower()
@@ -1378,7 +1404,9 @@ class SessionCleaner:
             text=self.t("x_of_y").format(shown=len(self.filtered_sessions), total=len(self.all_sessions)))
         self._clear_preview()
 
-    # ── Selection ──
+    # ══════════════════════════════════════════════════════════════
+    # ── Selection & Preview ──
+    # ══════════════════════════════════════════════════════════════
 
     def on_select(self, event):
         selected = self.tree.selection()
@@ -1437,7 +1465,9 @@ class SessionCleaner:
                      "<local-command-caveat>")
         return any(text.startswith(p) for p in prefixes) or text.startswith("<system-reminder>")
 
-    # ── Open / Resume Session ──
+    # ══════════════════════════════════════════════════════════════
+    # ── Open / Resume Session (Cross-Platform) ──
+    # ══════════════════════════════════════════════════════════════
 
     def _try_resolve_path(self, base, segments):
         if not segments:
@@ -1503,6 +1533,62 @@ class SessionCleaner:
                 return sid[len(prefix):]
         return sid
 
+    def _open_in_terminal(self, cmd_args, cwd):
+        """Open a command in a new terminal window, cross-platform."""
+        import sys, shlex
+        platform = sys.platform
+
+        if platform == "win32":
+            subprocess.Popen(
+                ["cmd", "/c", "start", "", "cmd", "/k"] + cmd_args,
+                cwd=cwd, shell=False
+            )
+        elif platform == "darwin":
+            cmd_str = " ".join(shlex.quote(a) for a in cmd_args)
+            cwd_q = shlex.quote(cwd)
+            # Try iTerm2 first, fall back to Terminal.app
+            iterm_script = (
+                f'tell application "iTerm"\n'
+                f'  create window with default profile\n'
+                f'  tell current session of current window\n'
+                f'    write text "cd {cwd_q} && {cmd_str}"\n'
+                f'  end tell\n'
+                f'end tell'
+            )
+            terminal_script = (
+                f'tell application "Terminal"\n'
+                f'  do script "cd {cwd_q} && {cmd_str}"\n'
+                f'  activate\n'
+                f'end tell'
+            )
+            # Check if iTerm2 is installed
+            iterm_path = "/Applications/iTerm.app"
+            if os.path.isdir(iterm_path):
+                subprocess.Popen(["osascript", "-e", iterm_script])
+            else:
+                subprocess.Popen(["osascript", "-e", terminal_script])
+        else:
+            # Linux: try common terminal emulators
+            cmd_str = " ".join(shlex.quote(a) for a in cmd_args)
+            cwd_q = shlex.quote(cwd)
+            bash_cmd = f"cd {cwd_q} && {cmd_str}; exec bash"
+            terminals = [
+                ["x-terminal-emulator", "-e", f"bash -c '{bash_cmd}'"],
+                ["gnome-terminal", "--", "bash", "-c", bash_cmd],
+                ["konsole", "-e", "bash", "-c", bash_cmd],
+                ["xfce4-terminal", "-e", f"bash -c '{bash_cmd}'"],
+                ["xterm", "-e", f"bash -c '{bash_cmd}'"],
+            ]
+            for term_cmd in terminals:
+                try:
+                    subprocess.Popen(term_cmd)
+                    return
+                except FileNotFoundError:
+                    continue
+            messagebox.showwarning(self.t("warn"),
+                "No supported terminal emulator found.\n"
+                f"Run manually: cd {cwd} && {cmd_str}")
+
     def _open_session(self, session):
         source = session.get("source", "")
         sid = self._get_session_id(session)
@@ -1511,37 +1597,25 @@ class SessionCleaner:
 
         if source == "claude":
             cwd = project_dir or os.path.expanduser("~")
-            subprocess.Popen(
-                ["cmd", "/c", "start", "", "cmd", "/k", "claude", "--resume", sid],
-                cwd=cwd, shell=False
-            )
+            self._open_in_terminal(["claude", "--resume", sid], cwd)
         elif source == "codex":
             codex_sid = session.get("codex_session_id", sid)
             cwd = project_dir or os.path.expanduser("~")
-            subprocess.Popen(
-                ["cmd", "/c", "start", "", "cmd", "/k", "codex", "resume", codex_sid],
-                cwd=cwd, shell=False
-            )
+            self._open_in_terminal(["codex", "resume", codex_sid], cwd)
         elif source == "factory":
             cwd = project_dir
             if not cwd:
                 messagebox.showwarning(self.t("warn"),
                     self.t("open_no_dir").format(path=session.get("folder", "")))
                 return
-            subprocess.Popen(
-                ["cmd", "/c", "start", "", "cmd", "/k", "droid", "--resume", sid],
-                cwd=cwd, shell=False
-            )
+            self._open_in_terminal(["droid", "--resume", sid], cwd)
         elif source == "opencode":
             cwd = project_dir
             if not cwd:
                 messagebox.showwarning(self.t("warn"),
                     self.t("open_no_dir").format(path=session.get("folder", "")))
                 return
-            subprocess.Popen(
-                ["cmd", "/c", "start", "", "cmd", "/k", "opencode", "-s", sid],
-                cwd=cwd, shell=False
-            )
+            self._open_in_terminal(["opencode", "-s", sid], cwd)
         else:
             messagebox.showinfo(self.t("warn"),
                 self.t("open_no_support").format(src=src_label))
@@ -1648,6 +1722,10 @@ class SessionCleaner:
         dlg.wait_window()
         return result["value"]
 
+    # ══════════════════════════════════════════════════════════════
+    # ── Rename Session ──
+    # ══════════════════════════════════════════════════════════════
+
     def _rename_session(self, session):
         source = session.get("source", "")
         if source == "codex":
@@ -1714,6 +1792,10 @@ class SessionCleaner:
         data["title"] = new_title
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+
+    # ══════════════════════════════════════════════════════════════
+    # ── Chat Preview & Pagination ──
+    # ══════════════════════════════════════════════════════════════
 
     def _extract_content_text(self, content):
         if isinstance(content, str):
@@ -1988,7 +2070,9 @@ class SessionCleaner:
             try: os.remove(diff_f)
             except: pass
 
-    # ── Actions ──
+    # ══════════════════════════════════════════════════════════════
+    # ── Delete & Bulk Actions ──
+    # ══════════════════════════════════════════════════════════════
 
     def _get_session_items(self):
         items = []
