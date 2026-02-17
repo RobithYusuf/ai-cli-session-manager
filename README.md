@@ -32,8 +32,9 @@ This tool was built to solve that problem: a single app that lets you manage ses
 - **Filter** by project, time range
 - **Sort** by date, name, size, project
 - **Group by** project, date, month, or age
-- **Preview** conversation content (user/assistant messages)
+- **Preview** conversation content with pagination (20 per page, Load More button)
 - **Open/Resume session** directly from the app (double-click, right-click, or button)
+- **Cross-platform** terminal launch -- Windows (CMD), macOS (iTerm2/Terminal.app), Linux (gnome-terminal, konsole, etc.)
 - **Rename session title** -- right-click > "Rename" (Factory, Claude Code, OpenCode)
 - **Model column** -- shows which AI model was used per session
 - **Right-click context menu** -- Open Session, Rename, Copy Session ID, Delete
@@ -50,7 +51,7 @@ Open a session directly from the app into a terminal. The behavior depends on th
 
 | Tool | Action |
 |---|---|
-| **Claude Code** | Opens terminal and runs `claude --resume <session-id>` -- resumes the conversation directly |
+| **Claude Code** | Opens terminal and runs `claude --resume <session-id>` with optional `--dangerously-skip-permissions` via dialog checkbox |
 | **Codex CLI** | Opens terminal and runs `codex resume <session-id>` -- resumes the conversation directly |
 | **Factory (Droid)** | Opens terminal and runs `droid --resume <session-id>` -- resumes the conversation directly |
 | **OpenCode** | Opens terminal and runs `opencode -s <session-id>` -- resumes the conversation directly |
@@ -99,7 +100,7 @@ Or on Windows, double-click `run.bat` or `app.pyw`.
 **Optional:** Create a desktop shortcut (Windows):
 ```bat
 @echo off
-start "" pythonw "C:\path\to\ai-session-cleaner\app.pyw"
+start "" pythonw "C:\path\to\ai-cli-session-manager\app.pyw"
 ```
 
 ## How It Works
