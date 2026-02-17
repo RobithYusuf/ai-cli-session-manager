@@ -136,7 +136,7 @@ class SessionCleaner:
 
     def __init__(self, root):
         self.root = root
-        self.root.title("Session Cleaner")
+        self.root.title("AI CLI Session Manager")
         self.root.geometry("1200x850")
         self.root.minsize(1000, 650)
         self.root.configure(bg="#0e0e10")
@@ -257,7 +257,7 @@ class SessionCleaner:
         header = ttk.Frame(self.root)
         header.pack(fill="x", padx=16, pady=(12, 6))
 
-        self.title_label = ttk.Label(header, text="Session Cleaner", style="Title.TLabel")
+        self.title_label = ttk.Label(header, text="AI CLI Session Manager", style="Title.TLabel")
         self.title_label.pack(side="left")
 
         # Language toggle

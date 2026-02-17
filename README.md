@@ -1,6 +1,6 @@
-# AI Session Cleaner
+# AI CLI Session Manager
 
-Desktop GUI app to browse, preview, and bulk-delete chat session files from AI coding tools.
+Desktop GUI app to browse, preview, resume, and manage chat session files from AI coding CLI tools.
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20|%20macOS%20|%20Linux-lightgrey)
@@ -8,13 +8,13 @@ Desktop GUI app to browse, preview, and bulk-delete chat session files from AI c
 
 ## Why This Tool?
 
-Most AI coding assistants (Factory/Droid, Claude Code, Codex CLI, OpenCode, etc.) store conversation sessions locally but **do not provide a built-in way to delete or manage them**. Over time, hundreds of session files accumulate on disk -- many of them blank or abandoned -- with no easy way to browse, filter, or clean them up.
+AI coding CLI tools (Factory/Droid, Claude Code, Codex CLI, OpenCode, etc.) store conversation sessions locally but **do not provide a unified way to manage them**. Over time, hundreds of session files accumulate on disk -- many of them blank or abandoned -- with no easy way to browse, preview, resume, or clean them up.
 
-This tool was built to solve that problem: a single app that lets you manage sessions across **multiple AI tools** in one place. Currently supports 4 sources, with more planned as new tools emerge.
+This tool was built to solve that problem: a single app that lets you manage sessions across **multiple AI CLI tools** in one place. Browse conversations, resume sessions directly, rename titles, and bulk-delete old files. Currently supports 4 sources, with more planned as new tools emerge.
 
 ## Screenshot
 
-![AI Session Cleaner](screenshots/preview-ui.png)
+![AI CLI Session Manager](screenshots/preview-ui.png)
 
 ## Supported Tools
 
@@ -52,7 +52,7 @@ Open a session directly from the app into a terminal. The behavior depends on th
 |---|---|
 | **Claude Code** | Opens terminal and runs `claude --resume <session-id>` -- resumes the conversation directly |
 | **Codex CLI** | Opens terminal and runs `codex resume <session-id>` -- resumes the conversation directly |
-| **Factory (Droid)** | Opens terminal with `droid` in the project folder. Type `/sessions` to select your session |
+| **Factory (Droid)** | Opens terminal and runs `droid --resume <session-id>` -- resumes the conversation directly |
 | **OpenCode** | Opens terminal with `opencode` in the project folder |
 
 **How to use:**
@@ -84,8 +84,8 @@ brew install python-tk
 ### 2. Clone & Install
 
 ```bash
-git clone https://github.com/RobithYusuf/ai-session-cleaner.git
-cd ai-session-cleaner
+git clone https://github.com/RobithYusuf/ai-cli-session-manager.git
+cd ai-cli-session-manager
 ```
 
 ### 3. Run
