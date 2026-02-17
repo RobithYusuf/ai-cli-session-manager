@@ -1072,6 +1072,7 @@ class SessionCleaner:
             project = "(unknown)"
             model = ""
             msg_count = 0
+            codex_session_id = ""
             try:
                 with open(filepath, "r", encoding="utf-8") as f:
                     for line in f:
@@ -1087,6 +1088,7 @@ class SessionCleaner:
                         if not isinstance(payload, dict):
                             continue
                         if t == "session_meta":
+                            codex_session_id = payload.get("id", "")
                             cwd = payload.get("cwd", "")
                             if cwd:
                                 project = self.get_project_name(
@@ -1120,6 +1122,7 @@ class SessionCleaner:
             return {
                 "id": "cx_" + sid, "filepath": filepath, "folder": "",
                 "source": "codex", "project": project,
+                "codex_session_id": codex_session_id or sid,
                 "mtime": mtime, "date_str": dt.strftime("%Y-%m-%d %H:%M"),
                 "date_date": dt.strftime("%Y-%m-%d"), "date_month": dt.strftime("%Y-%m"),
                 "date_obj": dt, "title": title, "first_chat": title,
@@ -1513,9 +1516,10 @@ class SessionCleaner:
                 cwd=cwd, shell=False
             )
         elif source == "codex":
+            codex_sid = session.get("codex_session_id", sid)
             cwd = project_dir or os.path.expanduser("~")
             subprocess.Popen(
-                ["cmd", "/c", "start", "", "cmd", "/k", "codex", "resume", sid],
+                ["cmd", "/c", "start", "", "cmd", "/k", "codex", "resume", codex_sid],
                 cwd=cwd, shell=False
             )
         elif source == "factory":
