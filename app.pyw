@@ -1489,7 +1489,7 @@ class SessionCleaner:
             try:
                 with open(fp, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                cwd = data.get("cwd", "") or data.get("working_directory", "")
+                cwd = data.get("directory", "") or data.get("cwd", "") or data.get("working_directory", "")
                 if cwd and os.path.isdir(cwd):
                     return cwd
             except:
