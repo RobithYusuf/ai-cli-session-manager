@@ -53,7 +53,7 @@ Open a session directly from the app into a terminal. The behavior depends on th
 | **Claude Code** | Opens terminal and runs `claude --resume <session-id>` -- resumes the conversation directly |
 | **Codex CLI** | Opens terminal and runs `codex resume <session-id>` -- resumes the conversation directly |
 | **Factory (Droid)** | Opens terminal and runs `droid --resume <session-id>` -- resumes the conversation directly |
-| **OpenCode** | Opens terminal with `opencode` in the project folder |
+| **OpenCode** | Opens terminal and runs `opencode -s <session-id>` -- resumes the conversation directly |
 
 **How to use:**
 - **Double-click** a session in the list

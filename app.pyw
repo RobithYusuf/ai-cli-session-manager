@@ -1535,7 +1535,7 @@ class SessionCleaner:
                     self.t("open_no_dir").format(path=session.get("folder", "")))
                 return
             subprocess.Popen(
-                ["cmd", "/c", "start", "", "cmd", "/k", "opencode"],
+                ["cmd", "/c", "start", "", "cmd", "/k", "opencode", "-s", sid],
                 cwd=cwd, shell=False
             )
         else:
