@@ -1589,6 +1589,53 @@ class SessionCleaner:
                 "No supported terminal emulator found.\n"
                 f"Run manually: cd {cwd} && {cmd_str}")
 
+    def _show_open_dialog(self, session, callback):
+        """Show modal dialog with options before opening a session."""
+        source = session.get("source", "")
+        dlg = tk.Toplevel(self.root)
+        dlg.title(self.t("open_session"))
+        dlg.configure(bg=self.colors["surface"])
+        dlg.resizable(False, False)
+        dlg.transient(self.root)
+        dlg.grab_set()
+
+        # Center on parent
+        dlg.update_idletasks()
+        w, h = 380, 180
+        x = self.root.winfo_x() + (self.root.winfo_width() - w) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - h) // 2
+        dlg.geometry(f"{w}x{h}+{x}+{y}")
+
+        title = session.get("title", "")[:60]
+        tk.Label(dlg, text=f"Resume: {title}", font=("Segoe UI", 9, "bold"),
+                 bg=self.colors["surface"], fg=self.colors["text"],
+                 wraplength=350).pack(padx=16, pady=(12, 4))
+
+        opts = {}
+        if source == "claude":
+            opts["skip_permissions"] = tk.BooleanVar(value=False)
+            tk.Checkbutton(dlg, text="--dangerously-skip-permissions",
+                           variable=opts["skip_permissions"],
+                           bg=self.colors["surface"], fg="#e06060",
+                           selectcolor=self.colors["surface2"],
+                           activebackground=self.colors["surface"],
+                           activeforeground="#e06060",
+                           font=("Consolas", 9)).pack(padx=20, anchor="w", pady=(8, 0))
+            tk.Label(dlg, text="⚠ Skip all permission prompts (use with caution)",
+                     bg=self.colors["surface"], fg=self.colors["dim"],
+                     font=("Segoe UI", 7, "italic")).pack(padx=36, anchor="w")
+
+        btn_frame = tk.Frame(dlg, bg=self.colors["surface"])
+        btn_frame.pack(pady=(16, 12))
+        tk.Button(btn_frame, text=self.t("open_session"), font=("Segoe UI", 9, "bold"),
+                  bg=self.colors["accent"], fg="#000", padx=20, pady=4, borderwidth=0,
+                  cursor="hand2",
+                  command=lambda: [dlg.destroy(), callback(opts)]).pack(side="left", padx=4)
+        tk.Button(btn_frame, text="Cancel", font=("Segoe UI", 9),
+                  bg=self.colors["border"], fg=self.colors["text"], padx=16, pady=4,
+                  borderwidth=0, cursor="hand2",
+                  command=dlg.destroy).pack(side="left", padx=4)
+
     def _open_session(self, session):
         source = session.get("source", "")
         sid = self._get_session_id(session)
@@ -1597,7 +1644,13 @@ class SessionCleaner:
 
         if source == "claude":
             cwd = project_dir or os.path.expanduser("~")
-            self._open_in_terminal(["claude", "--resume", sid], cwd)
+            def do_open(opts):
+                cmd = ["claude", "--resume", sid]
+                if opts.get("skip_permissions") and opts["skip_permissions"].get():
+                    cmd.append("--dangerously-skip-permissions")
+                self._open_in_terminal(cmd, cwd)
+            self._show_open_dialog(session, do_open)
+            return
         elif source == "codex":
             codex_sid = session.get("codex_session_id", sid)
             cwd = project_dir or os.path.expanduser("~")
