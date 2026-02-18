@@ -78,9 +78,11 @@ sudo apt install python3-tk
 # Fedora
 sudo dnf install python3-tkinter
 
-# macOS (Homebrew)
-brew install python-tk
+# macOS (Homebrew) -- recommended, the system Python has an outdated tkinter
+brew install python-tk@3.12
 ```
+
+> **macOS Note:** The built-in Python (`/usr/bin/python3`) ships with tkinter 8.5 which may cause rendering issues. Use Homebrew Python instead: `/opt/homebrew/bin/python3.12 app.pyw`
 
 ### 2. Clone & Install
 
@@ -101,6 +103,12 @@ Or on Windows, double-click `run.bat` or `app.pyw`.
 ```bat
 @echo off
 start "" pythonw "C:\path\to\ai-cli-session-manager\app.pyw"
+```
+
+**Optional:** Create a terminal alias (macOS/Linux):
+```bash
+# Add to ~/.zshrc or ~/.bashrc
+alias sm="/opt/homebrew/bin/python3.12 ~/path/to/ai-cli-session-manager/app.pyw &"
 ```
 
 ## How It Works

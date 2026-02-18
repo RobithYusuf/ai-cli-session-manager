@@ -2,10 +2,16 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import json
 import os
+import sys
 import shutil
 import subprocess
 from datetime import datetime, timedelta
 from collections import defaultdict
+
+_IS_MAC = sys.platform == "darwin"
+_FONT_UI = "San Francisco" if _IS_MAC else "Segoe UI"
+_FONT_MONO = "Menlo" if _IS_MAC else "Consolas"
+_RIGHT_CLICK = "<Button-2>" if _IS_MAC else "<Button-3>"
 
 
 class SessionCleaner:
@@ -224,35 +230,35 @@ class SessionCleaner:
         c = self.colors
 
         style.configure("TFrame", background=c["bg"])
-        style.configure("TLabel", background=c["bg"], foreground=c["text"], font=("Segoe UI", 10))
-        style.configure("Title.TLabel", background=c["bg"], foreground=c["accent"], font=("Segoe UI", 15, "bold"))
-        style.configure("Dim.TLabel", background=c["bg"], foreground=c["dim"], font=("Segoe UI", 9))
+        style.configure("TLabel", background=c["bg"], foreground=c["text"], font=(_FONT_UI, 10))
+        style.configure("Title.TLabel", background=c["bg"], foreground=c["accent"], font=(_FONT_UI, 15, "bold"))
+        style.configure("Dim.TLabel", background=c["bg"], foreground=c["dim"], font=(_FONT_UI, 9))
 
-        style.configure("TButton", font=("Segoe UI", 8), padding=(6, 3),
+        style.configure("TButton", font=(_FONT_UI, 8), padding=(6, 3),
                         background=c["border"], foreground=c["text"])
         style.map("TButton", background=[("active", "#3a3a5a")])
 
-        style.configure("Accent.TButton", font=("Segoe UI", 8, "bold"), padding=(6, 3),
+        style.configure("Accent.TButton", font=(_FONT_UI, 8, "bold"), padding=(6, 3),
                         background=c["accent"], foreground="#000")
         style.map("Accent.TButton", background=[("active", "#00b894")])
 
-        style.configure("Danger.TButton", font=("Segoe UI", 9, "bold"), padding=(8, 4),
+        style.configure("Danger.TButton", font=(_FONT_UI, 9, "bold"), padding=(8, 4),
                         background=c["danger"], foreground="#fff")
         style.map("Danger.TButton", background=[("active", "#c0392b")])
 
-        style.configure("Warn.TButton", font=("Segoe UI", 8, "bold"), padding=(6, 3),
+        style.configure("Warn.TButton", font=(_FONT_UI, 8, "bold"), padding=(6, 3),
                         background=c["warn"], foreground="#000")
         style.map("Warn.TButton", background=[("active", "#d48b00")])
 
-        style.configure("TCombobox", font=("Segoe UI", 9), fieldbackground=c["surface"],
+        style.configure("TCombobox", font=(_FONT_UI, 9), fieldbackground=c["surface"],
                         background=c["surface"], foreground=c["text"])
 
         style.configure("Treeview",
                         background=c["surface"], foreground=c["text"], fieldbackground=c["surface"],
-                        font=("Segoe UI", 9), rowheight=28, borderwidth=0)
+                        font=(_FONT_UI, 9), rowheight=28, borderwidth=0)
         style.configure("Treeview.Heading",
                         background=c["group_bg"], foreground=c["text"],
-                        font=("Segoe UI", 9, "bold"), borderwidth=0)
+                        font=(_FONT_UI, 9, "bold"), borderwidth=0)
         style.map("Treeview.Heading",
                   background=[("active", c["border"])],
                   foreground=[("active", c["accent"])])
@@ -269,7 +275,7 @@ class SessionCleaner:
         self.title_label.pack(side="left")
 
         # Language toggle
-        self.lang_btn = tk.Button(header, text="EN", font=("Segoe UI", 8, "bold"),
+        self.lang_btn = tk.Button(header, text="EN", font=(_FONT_UI, 8, "bold"),
                                   padx=6, pady=2, cursor="hand2",
                                   command=self._toggle_language)
         self.lang_btn.pack(side="right", padx=(8, 0))
@@ -282,7 +288,7 @@ class SessionCleaner:
 
         self.source_buttons = {}
         for key, info in self.SOURCES.items():
-            btn = tk.Button(src_frame, text=info["label"], font=("Segoe UI", 9, "bold"),
+            btn = tk.Button(src_frame, text=info["label"], font=(_FONT_UI, 9, "bold"),
                             padx=12, pady=4, cursor="hand2",
                             command=lambda k=key: self._switch_source(k))
             btn.pack(side="left", padx=(0, 2))
@@ -309,10 +315,10 @@ class SessionCleaner:
         self.lbl_search = ttk.Label(tb1, text=self.t("search"), style="Dim.TLabel")
         self.lbl_search.pack(side="left")
         self.search_var = tk.StringVar()
-        self.search_var.trace("w", self.apply_filters)
+        self.search_var.trace_add("write", self.apply_filters)
         tk.Entry(tb1, textvariable=self.search_var, width=20,
                  bg=self.colors["surface2"], fg=self.colors["text"],
-                 insertbackground=self.colors["text"], font=("Segoe UI", 9),
+                 insertbackground=self.colors["text"], font=(_FONT_UI, 9),
                  borderwidth=0, highlightthickness=1,
                  highlightcolor=self.colors["accent"],
                  highlightbackground=self.colors["border"]).pack(side="left", padx=(4, 8), ipady=3)
@@ -323,7 +329,7 @@ class SessionCleaner:
         # Searchable project entry
         self.project_entry = tk.Entry(tb1, textvariable=self.project_var, width=18,
                  bg=self.colors["surface2"], fg=self.colors["text"],
-                 insertbackground=self.colors["text"], font=("Segoe UI", 9),
+                 insertbackground=self.colors["text"], font=(_FONT_UI, 9),
                  borderwidth=0, highlightthickness=1,
                  highlightcolor=self.colors["accent"],
                  highlightbackground=self.colors["border"])
@@ -344,21 +350,21 @@ class SessionCleaner:
         self.date_var = tk.StringVar()
         self.date_combo = ttk.Combobox(tb1, textvariable=self.date_var, width=10, state="readonly")
         self.date_combo.pack(side="left", padx=(4, 8))
-        self.date_var.trace("w", self.apply_filters)
+        self.date_var.trace_add("write", self.apply_filters)
 
         self.lbl_sort = ttk.Label(tb1, text=self.t("sort_label"), style="Dim.TLabel")
         self.lbl_sort.pack(side="left")
         self.sort_var = tk.StringVar()
         self.sort_combo = ttk.Combobox(tb1, textvariable=self.sort_var, width=8, state="readonly")
         self.sort_combo.pack(side="left", padx=(4, 8))
-        self.sort_var.trace("w", self.apply_filters)
+        self.sort_var.trace_add("write", self.apply_filters)
 
         self.lbl_group = ttk.Label(tb1, text=self.t("group_label"), style="Dim.TLabel")
         self.lbl_group.pack(side="left")
         self.group_var = tk.StringVar()
         self.group_combo = ttk.Combobox(tb1, textvariable=self.group_var, width=10, state="readonly")
         self.group_combo.pack(side="left", padx=(4, 0))
-        self.group_var.trace("w", self.apply_filters)
+        self.group_var.trace_add("write", self.apply_filters)
 
         self._update_combo_values()
 
@@ -407,11 +413,11 @@ class SessionCleaner:
 
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
         self.tree.bind("<Double-1>", self._on_tree_double_click)
-        self.tree.bind("<Button-3>", self._on_tree_right_click)
+        self.tree.bind(_RIGHT_CLICK, self._on_tree_right_click)
 
         self.tree.tag_configure("group", background=self.colors["group_bg"],
                                 foreground=self.colors["accent"],
-                                font=("Segoe UI", 10, "bold"))
+                                font=(_FONT_UI, 10, "bold"))
 
         # Preview
         preview_frame = tk.Frame(self.paned, bg=self.colors["preview_bg"],
@@ -423,12 +429,12 @@ class SessionCleaner:
 
         self.preview_title_label = tk.Label(preview_header, text=self.t("preview"),
                                             bg=self.colors["surface"], fg=self.colors["accent"],
-                                            font=("Segoe UI", 10, "bold"), anchor="w", padx=10, pady=4)
+                                            font=(_FONT_UI, 10, "bold"), anchor="w", padx=10, pady=4)
         self.preview_title_label.pack(side="left", fill="x", expand=True)
 
         self.preview_info_label = tk.Label(preview_header, text="",
                                            bg=self.colors["surface"], fg=self.colors["dim"],
-                                           font=("Segoe UI", 8), anchor="e", padx=10)
+                                           font=(_FONT_UI, 8), anchor="e", padx=10)
         self.preview_info_label.pack(side="right")
 
         # Preview body container (text + load more button)
@@ -437,7 +443,7 @@ class SessionCleaner:
 
         self.preview_text = tk.Text(preview_body, wrap="word", height=5,
                                     bg=self.colors["preview_bg"], fg=self.colors["text"],
-                                    font=("Consolas", 9), borderwidth=0,
+                                    font=(_FONT_MONO, 9), borderwidth=0,
                                     insertbackground=self.colors["text"],
                                     padx=12, pady=8, state="disabled",
                                     selectbackground=self.colors["border"],
@@ -451,14 +457,14 @@ class SessionCleaner:
         # Load more button (hidden by default)
         self.preview_loadmore_frame = tk.Frame(preview_frame, bg=self.colors["surface2"])
         self.preview_loadmore_btn = tk.Button(self.preview_loadmore_frame,
-            text="Load More Messages", font=("Segoe UI", 8, "bold"),
+            text="Load More Messages", font=(_FONT_UI, 8, "bold"),
             bg=self.colors["border"], fg=self.colors["text"],
             activebackground=self.colors["accent"], activeforeground="#000",
             padx=16, pady=3, cursor="hand2", borderwidth=0,
             command=self._load_more_preview)
         self.preview_loadmore_btn.pack(pady=4)
         self.preview_msg_count_label = tk.Label(self.preview_loadmore_frame, text="",
-            bg=self.colors["surface2"], fg=self.colors["dim"], font=("Segoe UI", 7))
+            bg=self.colors["surface2"], fg=self.colors["dim"], font=(_FONT_UI, 7))
         self.preview_msg_count_label.pack()
 
         # Preview pagination state
@@ -469,21 +475,21 @@ class SessionCleaner:
         self._preview_total_available = 0
 
         self.preview_text.tag_configure("role_user", foreground=self.colors["preview_user"],
-                                        font=("Consolas", 9, "bold"))
+                                        font=(_FONT_MONO, 9, "bold"))
         self.preview_text.tag_configure("role_assistant", foreground=self.colors["preview_asst"],
-                                        font=("Consolas", 9, "bold"))
+                                        font=(_FONT_MONO, 9, "bold"))
         self.preview_text.tag_configure("role_system", foreground=self.colors["preview_sys"],
-                                        font=("Consolas", 9, "bold"))
+                                        font=(_FONT_MONO, 9, "bold"))
         self.preview_text.tag_configure("content", foreground=self.colors["text"],
-                                        font=("Consolas", 9), lmargin1=20, lmargin2=20)
+                                        font=(_FONT_MONO, 9), lmargin1=20, lmargin2=20)
         self.preview_text.tag_configure("content_truncated", foreground="#7a7a8a",
-                                        font=("Consolas", 8, "italic"), lmargin1=20, lmargin2=20)
+                                        font=(_FONT_MONO, 8, "italic"), lmargin1=20, lmargin2=20)
         self.preview_text.tag_configure("separator", foreground="#2a2a3a",
-                                        font=("Consolas", 6))
+                                        font=(_FONT_MONO, 6))
         self.preview_text.tag_configure("meta", foreground=self.colors["dim"],
-                                        font=("Consolas", 8, "italic"))
+                                        font=(_FONT_MONO, 8, "italic"))
         self.preview_text.tag_configure("msg_number", foreground="#555566",
-                                        font=("Consolas", 8))
+                                        font=(_FONT_MONO, 8))
 
         # Bottom bar
         bottom = ttk.Frame(self.root)
@@ -598,7 +604,7 @@ class SessionCleaner:
 
         self.project_listbox = tk.Listbox(self.project_listbox_frame,
             bg=self.colors["surface2"], fg=self.colors["text"],
-            font=("Segoe UI", 9), borderwidth=0, highlightthickness=0,
+            font=(_FONT_UI, 9), borderwidth=0, highlightthickness=0,
             selectbackground=self.colors["accent"], selectforeground="#000",
             activestyle="none")
 
@@ -714,11 +720,11 @@ class SessionCleaner:
         f = tk.Frame(parent, bg=self.colors["surface"], padx=16, pady=6)
         f.pack(side="left", fill="both", expand=True)
         v = tk.Label(f, text=value, bg=self.colors["surface"], fg=self.colors["accent"],
-                     font=("Segoe UI", 13, "bold"))
+                     font=(_FONT_UI, 13, "bold"))
         v.pack(anchor="w")
         display = self.t(label_key) if label_key in self.STRINGS["id"] else label_key
         lbl = tk.Label(f, text=display, bg=self.colors["surface"], fg=self.colors["dim"],
-                 font=("Segoe UI", 8))
+                 font=(_FONT_UI, 8))
         lbl.pack(anchor="w")
         lbl._lang_key = label_key
         return v
@@ -1271,6 +1277,8 @@ class SessionCleaner:
     # ══════════════════════════════════════════════════════════════
 
     def apply_filters(self, *args):
+        if not hasattr(self, 'tree'):
+            return
         search = self.search_var.get().lower()
         project_filter = self.project_var.get()
         date_filter = self._key_from_display(self.date_var.get(), self._date_keys)
@@ -1449,7 +1457,7 @@ class SessionCleaner:
                 continue
             color = self.project_colors.get(s["project"], self.colors["text"])
             tag_name = f"multi_{hash(s['project'])}"
-            self.preview_text.tag_configure(tag_name, foreground=color, font=("Consolas", 9, "bold"))
+            self.preview_text.tag_configure(tag_name, foreground=color, font=(_FONT_MONO, 9, "bold"))
             self.preview_text.insert("end", f"[{s['project']}] ", tag_name)
             self.preview_text.insert("end", f"{s['title']}\n", "content")
             self.preview_text.insert("end", f"  {s['date_str']}  |  {s['size_str']}  |  {s['age_str']}\n", "meta")
@@ -1607,7 +1615,7 @@ class SessionCleaner:
         dlg.geometry(f"{w}x{h}+{x}+{y}")
 
         title = session.get("title", "")[:60]
-        tk.Label(dlg, text=f"Resume: {title}", font=("Segoe UI", 9, "bold"),
+        tk.Label(dlg, text=f"Resume: {title}", font=(_FONT_UI, 9, "bold"),
                  bg=self.colors["surface"], fg=self.colors["text"],
                  wraplength=350).pack(padx=16, pady=(12, 4))
 
@@ -1620,18 +1628,18 @@ class SessionCleaner:
                            selectcolor=self.colors["surface2"],
                            activebackground=self.colors["surface"],
                            activeforeground="#e06060",
-                           font=("Consolas", 9)).pack(padx=20, anchor="w", pady=(8, 0))
+                           font=(_FONT_MONO, 9)).pack(padx=20, anchor="w", pady=(8, 0))
             tk.Label(dlg, text="⚠ Skip all permission prompts (use with caution)",
                      bg=self.colors["surface"], fg=self.colors["dim"],
-                     font=("Segoe UI", 7, "italic")).pack(padx=36, anchor="w")
+                     font=(_FONT_UI, 7, "italic")).pack(padx=36, anchor="w")
 
         btn_frame = tk.Frame(dlg, bg=self.colors["surface"])
         btn_frame.pack(pady=(16, 12))
-        tk.Button(btn_frame, text=self.t("open_session"), font=("Segoe UI", 9, "bold"),
+        tk.Button(btn_frame, text=self.t("open_session"), font=(_FONT_UI, 9, "bold"),
                   bg=self.colors["accent"], fg="#000", padx=20, pady=4, borderwidth=0,
                   cursor="hand2",
                   command=lambda: [dlg.destroy(), callback(opts)]).pack(side="left", padx=4)
-        tk.Button(btn_frame, text="Cancel", font=("Segoe UI", 9),
+        tk.Button(btn_frame, text="Cancel", font=(_FONT_UI, 9),
                   bg=self.colors["border"], fg=self.colors["text"], padx=16, pady=4,
                   borderwidth=0, cursor="hand2",
                   command=dlg.destroy).pack(side="left", padx=4)
@@ -1704,7 +1712,7 @@ class SessionCleaner:
         menu = tk.Menu(self.root, tearoff=0,
                        bg=self.colors["surface"], fg=self.colors["text"],
                        activebackground=self.colors["accent"], activeforeground="#000",
-                       font=("Segoe UI", 9))
+                       font=(_FONT_UI, 9))
         menu.add_command(label=self.t("open_session"),
                          command=lambda: self._open_session(s))
         menu.add_command(label=self.t("rename_title"),
@@ -1739,9 +1747,9 @@ class SessionCleaner:
 
         tk.Label(dlg, text=self.t("rename_prompt"),
                  bg=self.colors["bg"], fg=self.colors["text"],
-                 font=("Segoe UI", 10)).pack(padx=20, pady=(16, 6), anchor="w")
+                 font=(_FONT_UI, 10)).pack(padx=20, pady=(16, 6), anchor="w")
 
-        entry = tk.Entry(dlg, font=("Segoe UI", 11), width=50,
+        entry = tk.Entry(dlg, font=(_FONT_UI, 11), width=50,
                          bg=self.colors["surface2"], fg=self.colors["text"],
                          insertbackground=self.colors["text"],
                          borderwidth=0, highlightthickness=1,
@@ -1762,10 +1770,10 @@ class SessionCleaner:
         def on_cancel(*_):
             dlg.destroy()
 
-        tk.Button(btn_frame, text="OK", font=("Segoe UI", 9, "bold"),
+        tk.Button(btn_frame, text="OK", font=(_FONT_UI, 9, "bold"),
                   bg=self.colors["accent"], fg="#000", padx=20, pady=4,
                   cursor="hand2", command=on_ok).pack(side="right", padx=(6, 0))
-        tk.Button(btn_frame, text="Cancel", font=("Segoe UI", 9),
+        tk.Button(btn_frame, text="Cancel", font=(_FONT_UI, 9),
                   bg=self.colors["border"], fg=self.colors["text"], padx=20, pady=4,
                   cursor="hand2", command=on_cancel).pack(side="right")
 
@@ -2299,5 +2307,9 @@ if __name__ == "__main__":
         root.iconbitmap(default="")
     except:
         pass
+    if _IS_MAC:
+        root.lift()
+        root.attributes("-topmost", True)
+        root.after(100, lambda: root.attributes("-topmost", False))
     app = SessionCleaner(root)
     root.mainloop()
