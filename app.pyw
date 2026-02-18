@@ -288,9 +288,9 @@ class SessionCleaner:
 
         self.source_buttons = {}
         for key, info in self.SOURCES.items():
-            btn = tk.Button(src_frame, text=info["label"], font=(_FONT_UI, 9, "bold"),
-                            padx=12, pady=4, cursor="hand2",
-                            command=lambda k=key: self._switch_source(k))
+            btn = tk.Label(src_frame, text=info["label"], font=(_FONT_UI, 9, "bold"),
+                           padx=12, pady=4, cursor="hand2", borderwidth=1)
+            btn.bind("<Button-1>", lambda e, k=key: self._switch_source(k))
             btn.pack(side="left", padx=(0, 2))
             self.source_buttons[key] = btn
 
@@ -550,9 +550,9 @@ class SessionCleaner:
         accent = self.SOURCES[self.current_source]["accent"]
         for key, btn in self.source_buttons.items():
             if key == self.current_source:
-                btn.config(bg=self.SOURCES[key]["accent"], fg="#000", relief="sunken")
+                btn.config(bg=self.SOURCES[key]["accent"], fg="#000", relief="solid")
             else:
-                btn.config(bg=c["border"], fg=c["text"], relief="raised")
+                btn.config(bg=c["border"], fg="#ffffff", relief="flat")
         self.title_label.config(foreground=accent)
 
     # ══════════════════════════════════════════════════════════════
